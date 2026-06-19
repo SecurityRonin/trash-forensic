@@ -10,13 +10,13 @@
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance)
 [![security advisories](https://img.shields.io/badge/security-cargo--deny-success.svg)](deny.toml)
 
-**Who deleted what, when — recovered straight from a Windows `$Recycle.Bin`, with the suspicious entries already graded for you.** Point it at a recycle-bin directory carved from an image and get back, per deleted file: the original path, the original size, the deletion time, and a severity-graded finding for anything that looks tampered with.
+**Who deleted what, when — recovered from the trash of every major OS, with the suspicious entries already graded for you.** Point it at a Windows `$Recycle.Bin`, a Linux XDG trash, a macOS Trash `.DS_Store`, an Android `.trashed-` file, or an iOS `Photos.sqlite` carved from an image, and get back, per deleted item: where it came from, when it was deleted, and a severity-graded finding for anything that looks tampered with.
 
 ## The results, in 12 lines
 
 ```toml
 [dependencies]
-trash-forensic = "0.1"   # pulls in trash-core
+trash-forensic = "0.1"   # pulls in trash-core; all five OS readers on by default
 ```
 
 ```rust
@@ -43,34 +43,69 @@ C:\Users\victim\Documents\secret plan.docx (1234 bytes) deleted Some(2024-01-15T
   [High] RECYCLEBIN-PATH-TRAVERSAL — stored original path ..\..\Windows\…  contains parent-directory ('..') components — consistent with a crafted name rather than a normal deletion
 ```
 
-That is the whole job: every `$I` index in the directory decoded to a deleted-file record, each one paired with its `$R` content and graded. A clean record prints its line and no finding.
+Every reader follows the same shape — decode the artifact to a deleted-item record, then grade it. A clean record prints its line and no finding.
+
+## Five operating systems, one vocabulary
+
+"Trash" is the genus; each platform keeps its native artifact and entry point. Each reader module is gated behind a same-named Cargo feature (all on by default), so a single-platform consumer can `--no-default-features --features <os>` and drop the rest's dependencies.
+
+| OS | Artifact | Reader |
+|---|---|---|
+| **Windows** | `$Recycle.Bin\<SID>\` `$I` index ⇄ `$R` content | [`windows::parse_index`] + [`scan_pairs`] |
+| **Linux** | freedesktop.org / XDG `Trash/info/*.trashinfo` ⇄ `files/` | [`linux::parse_trashinfo`] + [`scan_trash`] |
+| **macOS** | Trash `.DS_Store` put-back records (`ptbN`/`ptbL`) | [`macos::parse_put_back`] |
+| **Android** | `MediaStore` `.trashed-<expiry>-<name>` filename codec | [`android::parse_trashed_name`] |
+| **iOS** | `Photos.sqlite` Recently Deleted (`ZASSET.ZTRASHEDSTATE`) | [`ios::parse_trashed_assets`] |
+
+[`windows::parse_index`]: https://docs.rs/trash-core/latest/trash_core/windows/fn.parse_index.html
+[`scan_pairs`]: https://docs.rs/trash-core/latest/trash_core/windows/fn.scan_pairs.html
+[`linux::parse_trashinfo`]: https://docs.rs/trash-core/latest/trash_core/linux/fn.parse_trashinfo.html
+[`scan_trash`]: https://docs.rs/trash-core/latest/trash_core/linux/fn.scan_trash.html
+[`macos::parse_put_back`]: https://docs.rs/trash-core/latest/trash_core/macos/fn.parse_put_back.html
+[`android::parse_trashed_name`]: https://docs.rs/trash-core/latest/trash_core/android/fn.parse_trashed_name.html
+[`ios::parse_trashed_assets`]: https://docs.rs/trash-core/latest/trash_core/ios/fn.parse_trashed_assets.html
 
 ## What gets flagged
 
 Each finding is an **observation** ("consistent with …"); the examiner draws the conclusions. The codes are a stable, published contract.
 
-| Code | Category | Severity | What it observes |
-|---|---|---|---|
-| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | The `$I` metadata survives but the `$R` content file is gone — the deleted file's record outlived its data |
-| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | The stored original path escapes its directory via a `..` component — consistent with a crafted name, not a normal shell deletion |
-| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | The deletion `FILETIME` is zero — recorded but never set, or cleared |
+| Code | Category | Severity | Platforms | What it observes |
+|---|---|---|---|---|
+| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | Windows | `$I` metadata survives but the `$R` content file is gone |
+| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | Windows | stored path escapes its directory via a `..` component |
+| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | Windows | the deletion `FILETIME` is zero — never set or cleared |
+| `TRASH-CONTENT-PURGED` | Residue | Medium | Linux | a `.trashinfo` survives but its `files/` content is gone |
+| `TRASH-PATH-TRAVERSAL` | Concealment | High | Linux | the stored `Path=` contains a spec-forbidden `..` |
+| `TRASH-DELETION-TIME-MISSING` | Integrity | Medium | Linux, iOS | the deletion timestamp is absent or unparseable |
+| `TRASH-ORPHAN-METADATA` | Residue | Medium | macOS | a `.DS_Store` put-back record survives but its item is gone |
+| `TRASH-PUTBACK-TRAVERSAL` | Concealment | High | macOS | the stored `ptbN`/`ptbL` escapes its directory via `..` |
+| `TRASH-EXPIRED-RESIDUE` | Residue | Low | Android, iOS | the item is still present past its retention/expiry window |
+| `TRASH-MALFORMED-NAME` | Structure | Low | Android | a `trashed`/`pending` name that does not parse to a token |
 
-Findings carry the offending `original_path` as evidence and are stamped with the analyzer name, version, and the `$I` filename, so they aggregate uniformly with every other [`forensicnomicon`](https://crates.io/crates/forensicnomicon) analyzer in the fleet.
+Findings carry the offending value as evidence and are stamped with the analyzer name, version, and per-item scope, so they aggregate uniformly with every other [`forensicnomicon`](https://crates.io/crates/forensicnomicon) analyzer in the fleet.
 
 ## No-Rust path
 
-The two crates are the building blocks; for an end-to-end timeline that correlates Recycle Bin evidence with the rest of an image, they feed [`issen`](https://github.com/SecurityRonin/issen) — the SecurityRonin examiner front end — so you get the findings without writing any Rust.
+The two crates are the building blocks; for an end-to-end timeline that correlates trash evidence with the rest of an image, they feed [`issen`](https://github.com/SecurityRonin/issen) — the SecurityRonin examiner front end — so you get the findings without writing any Rust.
 
 ## The two-crate split
 
-- **[`trash-core`](https://crates.io/crates/trash-core)** — the reader. Parses the `$I` index (version 1 pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs `$I`/`$R` by a directory scan. No findings.
-- **[`trash-forensic`](https://crates.io/crates/trash-forensic)** — the analyzer. Grades a parsed record + its pairing into canonical `forensicnomicon` findings. The split mirrors `ntfs-core`/`ntfs-forensic`.
+- **[`trash-core`](https://crates.io/crates/trash-core)** — the readers. One module per OS (`windows`, `linux`, `macos`, `android`, `ios`), each decoding its native artifact to a typed record and pairing metadata with content. No findings. The iOS reader builds on the pure-Rust [`sqlite-core`](https://crates.io/crates/sqlite-core) engine (no `libsqlite3`).
+- **[`trash-forensic`](https://crates.io/crates/trash-forensic)** — the analyzers. Grade a parsed record + its pairing into canonical `forensicnomicon` findings. The split mirrors `ntfs-core`/`ntfs-forensic`.
 
 ## Trust, but verify
 
-`$I` bytes are treated as attacker-controlled: the reader is **panic-free**, with bounds-checked integer reads, a 32 768-char cap on the version-2 filename length before allocation, and a typed `Error` — carrying the offending value — for every truncation or hostile length. Never a panic, never an out-of-bounds read. Both the parser and the full parse → audit pipeline are **fuzzed** (`cargo fuzz`, *must not panic*).
+Every reader treats its input as attacker-controlled. The binary parsers (`$I`, `.DS_Store`) use bounds-checked reads, cap allocations against hostile length fields, walk the macOS B-tree with a cycle guard, and return a typed error — carrying the offending value — rather than panicking. `unsafe` is **forbidden** workspace-wide. Each untrusted-input reader has a `cargo fuzz` target with a *must-not-panic* invariant.
 
-Correctness is validated against an **independent oracle** — the C tool [rifiuti2](https://github.com/abelcheung/rifiuti2) — not only self-consistent round-trips: fixtures are hand-assembled strictly from the libyal [*Windows Recycle.Bin file formats*](https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc) spec and decoded with both this reader and `rifiuti-vista`, which must agree on path, size, and deletion time. See [`docs/validation.md`](docs/validation.md).
+Correctness is checked against **independent oracles**, not only self-consistent round-trips:
+
+- **Windows** — fixtures built from the libyal [*Windows Recycle.Bin file formats*](https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc) spec, cross-decoded with [rifiuti2](https://github.com/abelcheung/rifiuti2).
+- **Linux** — the freedesktop.org [Trash Specification v1.0](https://specifications.freedesktop.org/trash/latest/); percent-decode and date parsing cross-checked against Python `urllib`/`datetime`.
+- **macOS** — a `.DS_Store` minted by al45tair's [`ds_store`](https://pypi.org/project/ds_store/) library; decode of a real `~/.Trash/.DS_Store` agrees with that oracle **byte-for-byte across 62 put-back records**.
+- **Android** — the codec's match/split decisions agree with AOSP `FileUtils.java` `PATTERN_EXPIRES_FILE` run as a regex oracle.
+- **iOS** — a real `Photos.sqlite` decoded by both this reader and the `sqlite3` CLI, agreeing on filename and `ZTRASHEDDATE`.
+
+See [`docs/validation.md`](docs/validation.md).
 
 ---
 
