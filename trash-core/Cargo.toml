@@ -15,13 +15,17 @@ readme       = "README.md"
 exclude      = ["tests/data/", "fuzz/"]
 
 [features]
+default = ["windows", "linux"]
+# Per-OS readers, each gated so a single-platform consumer drops the rest's deps.
+windows = []
+linux = ["dep:percent-encoding"]
 serde = ["dep:serde", "chrono/serde"]
 
 [dependencies]
 chrono    = { workspace = true }
 thiserror = { workspace = true }
 serde     = { workspace = true, optional = true }
-percent-encoding = { workspace = true }
+percent-encoding = { workspace = true, optional = true }
 
 [lints]
 workspace = true

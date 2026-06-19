@@ -1,4 +1,4 @@
-//! Read-only reader for the Linux FreeDesktop / XDG **Trash** artifact.
+//! Read-only reader for the Linux freedesktop.org / XDG **Trash** artifact.
 //!
 //! When a file is trashed on a freedesktop.org desktop (GNOME, KDE, XFCE, …) the
 //! implementation moves the bytes into a trash directory's `files/` subdirectory
@@ -19,7 +19,7 @@
 //!
 //! # `.trashinfo` format
 //!
-//! Per the FreeDesktop **Trash Specification v1.0** (2014-01-02,
+//! Per the freedesktop.org **Trash Specification v1.0** (2014-01-02,
 //! <https://specifications.freedesktop.org/trash/latest/>) the file is a
 //! `.desktop`-like INI:
 //!
