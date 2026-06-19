@@ -7,9 +7,11 @@ through any writer in this repo) and cross-checked with the independent
 for the oracle methodology and cross-check table, and the fleet machine-index at
 `issen/docs/corpus-catalog.md`.
 
-`tests/data/` is gitignored; this README + the generator below are the committed
-record needed to reproduce the corpus. Regenerate with the Python script in the
-catalog entry (same script that produced these bytes).
+The fixtures are committed (they are tiny and `core`'s `exclude` keeps them out
+of the published crate). This README + the generator below document exactly how
+each byte was produced, so the corpus stays reproducible and auditable:
+regenerate with the Python script below and the per-file MD5s recorded here must
+match.
 
 ## Generator
 
