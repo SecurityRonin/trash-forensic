@@ -284,4 +284,61 @@ mod tests {
         assert_eq!(mac_absolute_to_utc(0.0), None);
         assert_eq!(mac_absolute_to_utc(700_000_000.0), Some(at(1_678_307_200)));
     }
+
+    /// The WAL-overlay entry point with an empty overlay decodes the same rows.
+    #[test]
+    fn with_empty_wal_matches_plain() {
+        let assets = parse_trashed_assets_with_wal(FIXTURE.to_vec(), &[]).unwrap();
+        assert_eq!(assets.len(), 2);
+    }
+
+    /// `find_asset_table` skips a non-table row and a non-matching table name.
+    #[test]
+    fn find_asset_table_skips_non_matches() {
+        let row = |t: &str, n: &str, root: i64, sql: &str| {
+            vec![
+                Value::Text(t.into()),
+                Value::Text(n.into()),
+                Value::Text(n.into()),
+                Value::Integer(root),
+                Value::Text(sql.into()),
+            ]
+        };
+        let schema = vec![
+            row("index", "idx", 9, "CREATE INDEX idx ON ZASSET(x)"),
+            row("table", "Other", 3, "CREATE TABLE Other ( a )"),
+            row(
+                "table",
+                "ZASSET",
+                4,
+                "CREATE TABLE ZASSET ( ZTRASHEDSTATE INTEGER )",
+            ),
+        ];
+        let (root, _sql) = find_asset_table(&schema).unwrap();
+        assert_eq!(root, 4);
+    }
+
+    /// `parse_column_names` handles missing parens, nested parens (sized types),
+    /// empty/quoted-empty parts, and table-level constraints.
+    #[test]
+    fn parse_column_names_edge_ddl() {
+        assert!(parse_column_names("CREATE TABLE x").is_empty());
+        let cols = parse_column_names(
+            "CREATE TABLE x ( a INTEGER, '' TEXT, b VARCHAR(50), , PRIMARY KEY(a) )",
+        );
+        assert_eq!(cols, vec!["a".to_string(), "b".to_string()]);
+    }
+
+    /// Value accessors return `None` for the wrong variant; `date_at` reads `REAL`.
+    #[test]
+    fn value_accessors_reject_wrong_type() {
+        assert_eq!(value_text(&Value::Integer(1)), None);
+        assert_eq!(value_int(&Value::Text("x".into())), None);
+        assert_eq!(text_at(&[Value::Null], 0), None);
+        assert_eq!(
+            date_at(&[Value::Real(700_000_000.0)], 0),
+            Some(at(1_678_307_200))
+        );
+        assert_eq!(date_at(&[Value::Null], 0), None);
+    }
 }

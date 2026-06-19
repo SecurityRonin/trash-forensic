@@ -160,9 +160,7 @@ fn parse_deletion_date(value: &str) -> Option<NaiveDateTime> {
     let (date, time) = value.split_once('T')?;
     if date.len() == 8 && date.bytes().all(|b| b.is_ascii_digit()) {
         let normalised = format!("{}-{}-{}T{}", &date[0..4], &date[4..6], &date[6..8], time);
-        if let Ok(dt) = NaiveDateTime::parse_from_str(&normalised, FORMAT) {
-            return Some(dt);
-        }
+        return NaiveDateTime::parse_from_str(&normalised, FORMAT).ok();
     }
     None
 }
@@ -358,5 +356,16 @@ mod tests {
         assert!(orphan.content_path.is_none());
 
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A line without `=` is skipped, and a `DeletionDate` with a `T` but a
+    /// non-8-digit date part falls through the basic-form parse to `None`.
+    #[test]
+    fn junk_line_skipped_and_basic_date_fallthrough() {
+        let data =
+            b"[Trash Info]\n; a comment line without an equals sign\nPath=/x\nDeletionDate=12345T00:00:00\n";
+        let info = parse_trashinfo(data).unwrap();
+        assert_eq!(info.original_path, "/x");
+        assert_eq!(info.deleted_at, None);
     }
 }

@@ -206,4 +206,15 @@ mod tests {
             Some(at(1_700_000_000 - 30 * 86_400))
         );
     }
+
+    /// The pending state uses a 7-day retention window for the inferred deletion.
+    #[test]
+    fn pending_retention_and_inference() {
+        let t = parse_trashed_name(".pending-1700000000-x.tmp").unwrap();
+        assert_eq!(t.state.default_retention_secs(), 7 * 86_400);
+        assert_eq!(
+            t.inferred_deleted_at(),
+            Some(at(1_700_000_000 - 7 * 86_400))
+        );
+    }
 }

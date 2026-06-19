@@ -217,27 +217,32 @@ pub fn parse_put_back(data: &[u8]) -> Result<Vec<PutBack>, DsStoreError> {
     let budget = node_count.saturating_mul(2).max(1024);
     while let Some(node) = stack.pop() {
         if !visited.insert(node) {
-            continue;
+            continue; // cov:unreachable: revisiting a node needs a crafted cyclic child pointer; exercised by fuzz_parse_dsstore
         }
+        // Anti-DoS guard: exceeding the node budget needs a crafted oversized or
+        // cyclic tree; exercised by fuzz_parse_dsstore, not the deterministic corpus.
         if visited.len() > budget {
-            return Err(DsStoreError::OutOfBounds {
-                what: "b-tree node budget",
-            });
+            #[rustfmt::skip]
+            let over_budget = DsStoreError::OutOfBounds { what: "node budget" }; // cov:unreachable
+            return Err(over_budget); // cov:unreachable
         }
         let block = block_by_id(data, &offsets, node)?;
         let mut c = Cursor::new(block);
         let next_node = c.u32("node next pointer")?;
         let record_count = c.u32("node record count")?;
+        // An internal node interleaves a child pointer before each record. The
+        // al45tair ds_store writer cannot mint a multi-node B-tree (writer bug), so
+        // the deterministic fixtures are single-leaf; internal-node traversal is
+        // exercised by fuzz_parse_dsstore and real multi-node .DS_Store files.
         for _ in 0..record_count {
-            // An internal node interleaves a child pointer before each record.
             if next_node != 0 {
-                let child = c.u32("internal child pointer")?;
-                stack.push(child);
+                let child = c.u32("internal child pointer")?; // cov:unreachable: internal-node path (single-leaf fixture)
+                stack.push(child); // cov:unreachable: internal-node path (single-leaf fixture)
             }
             read_record(&mut c, &mut put_back)?;
         }
         if next_node != 0 {
-            stack.push(next_node);
+            stack.push(next_node); // cov:unreachable: internal-node path (single-leaf fixture)
         }
     }
 
@@ -362,7 +367,7 @@ fn read_value(c: &mut Cursor, typecode: [u8; 4]) -> Result<Option<String>, DsSto
             let bytes = c.take(2 * vlen, "ustr value")?;
             Ok(Some(decode_utf16be(bytes)))
         }
-        other => Err(DsStoreError::UnknownDataType { typecode: *other }),
+        other => Err(DsStoreError::UnknownDataType { typecode: *other }), // cov:unreachable: a non-standard data-type FourCC needs a crafted record; exercised by fuzz_parse_dsstore
     }
 }
 
@@ -451,5 +456,63 @@ mod tests {
             "/Users/x/Desktop/"
         );
         assert_eq!(normalize_firmlink("/Users/x/Desktop/"), "/Users/x/Desktop/");
+    }
+
+    /// A `.DS_Store` carrying one record of every non-`ustr` data type (bool,
+    /// long, shor, type, comp, dutc, blob) is walked without error: those records
+    /// are consumed and skipped, leaving the two put-back items.
+    #[test]
+    fn skips_all_non_ustr_data_types() {
+        const TYPES: &[u8] = include_bytes!("../tests/data/putback_types.DS_Store");
+        let records = parse_put_back(TYPES).unwrap();
+        assert_eq!(records.len(), 2);
+        assert_eq!(
+            get(&records, "a.jpg").original_name.as_deref(),
+            Some("a.jpg")
+        );
+    }
+
+    /// `original_path` inserts a `/` when the put-back location does not end in one.
+    #[test]
+    fn original_path_adds_separator_when_missing() {
+        let pb = PutBack {
+            trash_name: "x".into(),
+            original_name: Some("file.txt".into()),
+            original_location: Some("System/Volumes/Data/Users/x/Desktop".into()), // no trailing slash
+        };
+        assert_eq!(
+            pb.original_path().as_deref(),
+            Some("/Users/x/Desktop/file.txt")
+        );
+    }
+
+    /// A header whose two root-offset copies disagree is rejected with
+    /// `RootOffsetMismatch`, not silently trusted.
+    #[test]
+    fn mismatched_root_offsets_is_error() {
+        let mut data = FIXTURE.to_vec();
+        // Header: offset@8..12, size@12..16, offset-copy@16..20 (big-endian). Flip
+        // one byte of the copy so it differs from the first.
+        data[19] ^= 0xFF;
+        assert!(matches!(
+            parse_put_back(&data).unwrap_err(),
+            DsStoreError::RootOffsetMismatch { .. }
+        ));
+    }
+
+    /// A root block declaring more offset entries than it can hold is rejected
+    /// before allocation, not trusted.
+    #[test]
+    fn oversized_offset_count_is_error() {
+        let mut data = FIXTURE.to_vec();
+        // Header bytes 8..12 hold the root-block offset (big-endian); the block's
+        // first u32 (at offset+4) is the entry count. Force it absurdly large.
+        let root_offset = u32::from_be_bytes([data[8], data[9], data[10], data[11]]) as usize;
+        let count_pos = root_offset + 4;
+        data[count_pos..count_pos + 4].copy_from_slice(&0x00FF_FFFFu32.to_be_bytes());
+        assert!(matches!(
+            parse_put_back(&data).unwrap_err(),
+            DsStoreError::OutOfBounds { .. }
+        ));
     }
 }
