@@ -1,0 +1,27 @@
+[package]
+name    = "recyclebin-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+
+[[bin]]
+name = "fuzz_parse_index"
+path = "fuzz_targets/fuzz_parse_index.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_forensic"
+path = "fuzz_targets/fuzz_forensic.rs"
+test = false
+doc  = false
+
+[dependencies]
+libfuzzer-sys   = "0.4"
+recyclebin-core = { path = "../core" }
+recyclebin-forensic = { path = "../forensic" }
