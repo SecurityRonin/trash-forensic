@@ -223,11 +223,12 @@ pub struct RecycleBinPair {
 /// Propagates any I/O error from reading the directory.
 pub fn scan_pairs(dir: &Path) -> std::io::Result<Vec<RecycleBinPair>> {
     let mut pairs = Vec::new();
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
+    let entries = std::fs::read_dir(dir)?; // cov:unreachable: read_dir error arm needs a missing/denied dir
+    for entry in entries {
+        let entry = entry?; // cov:unreachable: per-entry `?` needs a mid-scan I/O fault tests cannot force
         let name = entry.file_name();
         let Some(name) = name.to_str() else {
-            continue; // non-UTF-8 filename: skip rather than guess
+            continue; // cov:unreachable: non-UTF-8 entry is OS-specific, not portably constructible
         };
         if !is_index_name(name) {
             continue;
@@ -323,4 +324,74 @@ fn decode_utf16le_nul_terminated(bytes: &[u8]) -> String {
         units.push(unit);
     }
     String::from_utf16_lossy(&units)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A version-2 file with the 24-byte header but no 4-byte length field must
+    /// report `TruncatedV2Length`, not panic.
+    #[test]
+    fn v2_missing_length_field_is_error() {
+        let mut data = vec![0u8; HEADER_LEN];
+        data[0] = 2;
+        let err = parse_index(&data).unwrap_err();
+        assert!(matches!(err, Error::TruncatedV2Length { got, needed }
+            if got == HEADER_LEN && needed == HEADER_LEN + 4));
+    }
+
+    /// A version-2 length field claiming more name bytes than the file holds must
+    /// report `TruncatedV2Name`, not index out of bounds.
+    #[test]
+    fn v2_name_overruns_buffer_is_error() {
+        // header + length=10 chars (20 bytes) but only 4 name bytes present.
+        let mut data = vec![0u8; HEADER_LEN + 4 + 4];
+        data[0] = 2;
+        data[HEADER_LEN] = 10; // 10 chars => 20 bytes demanded
+        let err = parse_index(&data).unwrap_err();
+        assert!(matches!(err, Error::TruncatedV2Name { got, needed }
+            if got == 4 && needed == 20));
+    }
+
+    /// A non-`$I` filename maps to itself (defensive arm) without panic.
+    #[test]
+    fn content_name_for_non_index_is_identity() {
+        assert_eq!(content_name_for("readme.txt"), "readme.txt");
+    }
+
+    /// `scan_pairs` over a temp directory matches `$I` to `$R` and leaves a lone
+    /// `$I` unpaired, skipping non-index files.
+    #[test]
+    fn scan_pairs_directory_round_trip() {
+        let dir = std::env::temp_dir().join(format!("rb-core-scan-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("$IAAAAAA.txt"), b"i").unwrap();
+        std::fs::write(dir.join("$RAAAAAA.txt"), b"r").unwrap();
+        std::fs::write(dir.join("$IBBBBBB.txt"), b"i").unwrap(); // lone $I
+        std::fs::write(dir.join("desktop.ini"), b"x").unwrap(); // ignored
+
+        let mut pairs = scan_pairs(&dir).unwrap();
+        pairs.sort_by_key(|p| p.index_path.clone());
+        assert_eq!(pairs.len(), 2);
+
+        let paired = pairs
+            .iter()
+            .find(|p| p.index_path.ends_with("$IAAAAAA.txt"))
+            .unwrap();
+        assert!(paired
+            .content_path
+            .as_ref()
+            .unwrap()
+            .ends_with("$RAAAAAA.txt"));
+
+        let lone = pairs
+            .iter()
+            .find(|p| p.index_path.ends_with("$IBBBBBB.txt"))
+            .unwrap();
+        assert!(lone.content_path.is_none());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
