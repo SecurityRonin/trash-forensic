@@ -33,6 +33,71 @@ pub enum TrashedNameAnomaly {
     },
 }
 
+impl TrashedNameAnomaly {
+    /// Stable, scheme-prefixed machine code (a published contract).
+    fn code(&self) -> &'static str {
+        match self {
+            TrashedNameAnomaly::ExpiredResidue { .. } => "TRASH-EXPIRED-RESIDUE",
+            TrashedNameAnomaly::MalformedName { .. } => "TRASH-MALFORMED-NAME",
+        }
+    }
+
+    /// Analytical lens for the anomaly.
+    fn category(&self) -> Category {
+        match self {
+            TrashedNameAnomaly::ExpiredResidue { .. } => Category::Residue,
+            TrashedNameAnomaly::MalformedName { .. } => Category::Structure,
+        }
+    }
+
+    /// The offending filename, common to both variants.
+    fn name(&self) -> &str {
+        match self {
+            TrashedNameAnomaly::ExpiredResidue { name }
+            | TrashedNameAnomaly::MalformedName { name } => name,
+        }
+    }
+
+    /// Human-readable, consistent-with note.
+    fn note(&self) -> String {
+        match self {
+            TrashedNameAnomaly::ExpiredResidue { name } => format!(
+                "trashed item {name} is still present though its dateExpires has passed — \
+                 consistent with the file having survived the idle-maintenance sweep and \
+                 remaining recoverable"
+            ),
+            TrashedNameAnomaly::MalformedName { name } => format!(
+                "name {name} carries a trashed/pending prefix but does not parse as a valid \
+                 MediaStore trash token — surfaced verbatim for inspection"
+            ),
+        }
+    }
+
+    /// Convert this anomaly into a canonical [`Finding`]. Both variants are Low
+    /// severity.
+    fn to_finding(&self, source: Source) -> Finding {
+        let name = self.name().to_string();
+        Finding::observation(Severity::Low, self.category(), self.code())
+            .note(self.note())
+            .source(source)
+            .evidence_item(Evidence {
+                field: "name".to_string(),
+                value: name.clone(),
+                location: Some(Location::Path(name)),
+            })
+            .build()
+    }
+}
+
+/// Whether a name carries a case-insensitive `.trashed-`/`.pending-` prefix
+/// (each nine bytes). Boundary-safe: a leading multi-byte char yields `false`.
+fn has_trashed_prefix(name: &str) -> bool {
+    name.get(..9).is_some_and(|head| {
+        let lower = head.to_ascii_lowercase();
+        lower == ".trashed-" || lower == ".pending-"
+    })
+}
+
 /// Audit a single directory-entry name against the `MediaStore` trash codec.
 /// `now` is the reference time the item's expiry is compared against (the caller
 /// passes the acquisition/analysis time).
@@ -42,7 +107,32 @@ pub enum TrashedNameAnomaly {
 /// yields no findings.
 #[must_use]
 pub fn audit_trashed_name(name: &str, now: DateTime<Utc>) -> Vec<Finding> {
-    todo!("RED: audit_trashed_name not yet implemented: {name} {now}")
+    let mut anomalies = Vec::new();
+    match parse_trashed_name(name) {
+        Some(parsed) => {
+            if parsed.expires_at().is_some_and(|expires| expires < now) {
+                anomalies.push(TrashedNameAnomaly::ExpiredResidue {
+                    name: name.to_string(),
+                });
+            }
+        }
+        None if has_trashed_prefix(name) => {
+            anomalies.push(TrashedNameAnomaly::MalformedName {
+                name: name.to_string(),
+            });
+        }
+        None => {}
+    }
+
+    let source = Source {
+        analyzer: ANALYZER.to_string(),
+        scope: name.to_string(),
+        version: Some(env!("CARGO_PKG_VERSION").to_string()),
+    };
+    anomalies
+        .iter()
+        .map(|a| a.to_finding(source.clone()))
+        .collect()
 }
 
 #[cfg(test)]
