@@ -31,6 +31,8 @@
 //! All reads are bounds-checked: a truncated or hostile `.DS_Store` yields a
 //! typed [`DsStoreError`], never a panic, and the B-tree walk is cycle-guarded.
 
+use std::collections::{BTreeMap, HashSet};
+
 use thiserror::Error;
 
 /// Errors returned while parsing a `.DS_Store` put-back store.
@@ -139,10 +141,239 @@ fn normalize_firmlink(location: &str) -> String {
 /// is truncated or inconsistent, or a record carries an undefined data-type code.
 /// Never panics on hostile input.
 pub fn parse_put_back(data: &[u8]) -> Result<Vec<PutBack>, DsStoreError> {
-    todo!(
-        "RED: parse_put_back not yet implemented (len={})",
-        data.len()
-    )
+    /// `00 00 00 01` + `Bud1` + offset + size + offset-copy + 16 unknown.
+    const HEADER_LEN: usize = 36;
+
+    if data.len() < HEADER_LEN {
+        return Err(DsStoreError::TruncatedHeader {
+            got: data.len(),
+            needed: HEADER_LEN,
+        });
+    }
+
+    let mut head = Cursor::new(data);
+    let word0 = head.u32("header word")?;
+    let magic = head.array4("magic")?;
+    if word0 != 1 || &magic != b"Bud1" {
+        return Err(DsStoreError::BadMagic { word0, magic });
+    }
+    let root_offset = head.u32("root offset")?;
+    let root_size = head.u32("root size")?;
+    let root_offset_copy = head.u32("root offset copy")?;
+    if root_offset != root_offset_copy {
+        return Err(DsStoreError::RootOffsetMismatch {
+            first: root_offset,
+            second: root_offset_copy,
+        });
+    }
+
+    // Root (allocator metadata) block: the block-address table then the table of
+    // contents that names the `DSDB` B-tree.
+    let root = block_slice(data, root_offset, root_size, "root block")?;
+    let mut r = Cursor::new(root);
+    let count = r.u32("offset count")? as usize;
+    let _unknown = r.u32("offset count guard")?;
+    // The on-disk table is padded up to a multiple of 256 entries; bound the
+    // count by the block before allocating to defend against a hostile value.
+    if count > root.len() / 4 {
+        return Err(DsStoreError::OutOfBounds {
+            what: "offset table count",
+        });
+    }
+    let padded = count.div_ceil(256) * 256;
+    let mut offsets = Vec::with_capacity(count);
+    for i in 0..padded {
+        let entry = r.u32("offset entry")?;
+        if i < count {
+            offsets.push(entry);
+        }
+    }
+
+    let toc_count = r.u32("toc count")?;
+    let mut dsdb: Option<u32> = None;
+    for _ in 0..toc_count {
+        let nlen = r.u8("toc name length")? as usize;
+        let name = r.take(nlen, "toc name")?;
+        let block_id = r.u32("toc block id")?;
+        if name == b"DSDB" {
+            dsdb = Some(block_id);
+        }
+    }
+    let dsdb = dsdb.ok_or(DsStoreError::NoDsdb)?;
+
+    // DSDB master block: root node id + tree node count.
+    let master = block_by_id(data, &offsets, dsdb)?;
+    let mut m = Cursor::new(master);
+    let root_node = m.u32("dsdb root node")?;
+    let _levels = m.u32("dsdb levels")?;
+    let _records = m.u32("dsdb record count")?;
+    let node_count = m.u32("dsdb node count")? as usize;
+
+    // Walk the B-tree collecting `ptbN`/`ptbL` per item. A visited set plus a node
+    // budget guard against malicious cyclic or over-long child pointers.
+    let mut put_back: BTreeMap<String, (Option<String>, Option<String>)> = BTreeMap::new();
+    let mut visited: HashSet<u32> = HashSet::new();
+    let mut stack = vec![root_node];
+    let budget = node_count.saturating_mul(2).max(1024);
+    while let Some(node) = stack.pop() {
+        if !visited.insert(node) {
+            continue;
+        }
+        if visited.len() > budget {
+            return Err(DsStoreError::OutOfBounds {
+                what: "b-tree node budget",
+            });
+        }
+        let block = block_by_id(data, &offsets, node)?;
+        let mut c = Cursor::new(block);
+        let next_node = c.u32("node next pointer")?;
+        let record_count = c.u32("node record count")?;
+        for _ in 0..record_count {
+            // An internal node interleaves a child pointer before each record.
+            if next_node != 0 {
+                let child = c.u32("internal child pointer")?;
+                stack.push(child);
+            }
+            read_record(&mut c, &mut put_back)?;
+        }
+        if next_node != 0 {
+            stack.push(next_node);
+        }
+    }
+
+    Ok(put_back
+        .into_iter()
+        .map(|(trash_name, (original_name, original_location))| PutBack {
+            trash_name,
+            original_name,
+            original_location,
+        })
+        .collect())
+}
+
+/// A bounds-checked, big-endian cursor: every read returns a [`DsStoreError`]
+/// rather than panicking when the underlying slice is too short.
+struct Cursor<'a> {
+    buf: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> Cursor<'a> {
+    fn new(buf: &'a [u8]) -> Self {
+        Self { buf, pos: 0 }
+    }
+
+    fn take(&mut self, n: usize, what: &'static str) -> Result<&'a [u8], DsStoreError> {
+        let end = self
+            .pos
+            .checked_add(n)
+            .ok_or(DsStoreError::OutOfBounds { what })?;
+        let slice = self
+            .buf
+            .get(self.pos..end)
+            .ok_or(DsStoreError::OutOfBounds { what })?;
+        self.pos = end;
+        Ok(slice)
+    }
+
+    fn array4(&mut self, what: &'static str) -> Result<[u8; 4], DsStoreError> {
+        let bytes = self.take(4, what)?;
+        bytes
+            .try_into()
+            .map_err(|_| DsStoreError::OutOfBounds { what })
+    }
+
+    fn u32(&mut self, what: &'static str) -> Result<u32, DsStoreError> {
+        Ok(u32::from_be_bytes(self.array4(what)?))
+    }
+
+    fn u8(&mut self, what: &'static str) -> Result<u8, DsStoreError> {
+        Ok(self.take(1, what)?[0])
+    }
+
+    fn skip(&mut self, n: usize, what: &'static str) -> Result<(), DsStoreError> {
+        self.take(n, what).map(|_| ())
+    }
+}
+
+/// Slice a buddy-allocator block out of the file. Stored offsets skip the 4-byte
+/// `00 00 00 01` prefix, so a stored offset `o` maps to file position `o + 4`.
+fn block_slice<'a>(
+    data: &'a [u8],
+    offset: u32,
+    size: u32,
+    what: &'static str,
+) -> Result<&'a [u8], DsStoreError> {
+    let start = (offset as usize)
+        .checked_add(4)
+        .ok_or(DsStoreError::OutOfBounds { what })?;
+    let end = start
+        .checked_add(size as usize)
+        .ok_or(DsStoreError::OutOfBounds { what })?;
+    data.get(start..end)
+        .ok_or(DsStoreError::OutOfBounds { what })
+}
+
+/// Look up a block by its allocator id: the offset-table entry packs the block's
+/// offset in its high bits and the base-2 log of its size in its low 5 bits.
+fn block_by_id<'a>(data: &'a [u8], offsets: &[u32], id: u32) -> Result<&'a [u8], DsStoreError> {
+    let addr = *offsets
+        .get(id as usize)
+        .ok_or(DsStoreError::OutOfBounds { what: "block id" })?;
+    let offset = addr & !0x1F;
+    let size = 1u32 << (addr & 0x1F);
+    block_slice(data, offset, size, "block")
+}
+
+/// Read one `.DS_Store` record, recording its value into `out` when it is a
+/// `ptbN` (put-back name) or `ptbL` (put-back location). Every record is fully
+/// consumed so the cursor lands on the next record.
+fn read_record(
+    c: &mut Cursor,
+    out: &mut BTreeMap<String, (Option<String>, Option<String>)>,
+) -> Result<(), DsStoreError> {
+    let nlen = c.u32("record name length")? as usize;
+    let name_bytes = c.take(2 * nlen, "record name")?;
+    let filename = decode_utf16be(name_bytes);
+    let code = c.array4("record code")?;
+    let typecode = c.array4("record data type")?;
+    let value = read_value(c, typecode)?;
+    match &code {
+        b"ptbN" => out.entry(filename).or_default().0 = value,
+        b"ptbL" => out.entry(filename).or_default().1 = value,
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Consume a record's typed value, returning the decoded string for the
+/// `ustr` type (the only type `ptbN`/`ptbL` use) and `None` for the others.
+fn read_value(c: &mut Cursor, typecode: [u8; 4]) -> Result<Option<String>, DsStoreError> {
+    match &typecode {
+        b"bool" => c.skip(1, "bool value").map(|()| None),
+        b"long" | b"shor" | b"type" => c.skip(4, "fixed value").map(|()| None),
+        b"comp" | b"dutc" => c.skip(8, "8-byte value").map(|()| None),
+        b"blob" => {
+            let vlen = c.u32("blob length")? as usize;
+            c.skip(vlen, "blob value").map(|()| None)
+        }
+        b"ustr" => {
+            let vlen = c.u32("ustr length")? as usize;
+            let bytes = c.take(2 * vlen, "ustr value")?;
+            Ok(Some(decode_utf16be(bytes)))
+        }
+        other => Err(DsStoreError::UnknownDataType { typecode: *other }),
+    }
+}
+
+/// Decode a UTF-16 big-endian byte slice, lossily replacing invalid sequences
+/// with U+FFFD. A trailing odd byte is ignored.
+fn decode_utf16be(bytes: &[u8]) -> String {
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|pair| u16::from_be_bytes([pair[0], pair[1]]))
+        .collect();
+    String::from_utf16_lossy(&units)
 }
 
 #[cfg(test)]
