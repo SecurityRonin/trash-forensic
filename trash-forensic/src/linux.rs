@@ -40,6 +40,94 @@ pub enum TrashAnomaly {
     },
 }
 
+impl TrashAnomaly {
+    /// Stable, scheme-prefixed machine code (a published contract).
+    fn code(&self) -> &'static str {
+        match self {
+            TrashAnomaly::ContentPurged { .. } => "TRASH-CONTENT-PURGED",
+            TrashAnomaly::PathTraversal { .. } => "TRASH-PATH-TRAVERSAL",
+            TrashAnomaly::DeletionTimeMissing { .. } => "TRASH-DELETION-TIME-MISSING",
+        }
+    }
+
+    /// Canonical severity for the anomaly.
+    fn severity(&self) -> Severity {
+        match self {
+            TrashAnomaly::PathTraversal { .. } => Severity::High,
+            TrashAnomaly::ContentPurged { .. } | TrashAnomaly::DeletionTimeMissing { .. } => {
+                Severity::Medium
+            }
+        }
+    }
+
+    /// Analytical lens for the anomaly.
+    fn category(&self) -> Category {
+        match self {
+            TrashAnomaly::ContentPurged { .. } => Category::Residue,
+            TrashAnomaly::PathTraversal { .. } => Category::Concealment,
+            TrashAnomaly::DeletionTimeMissing { .. } => Category::Integrity,
+        }
+    }
+
+    /// The offending original path, common to every variant.
+    fn original_path(&self) -> &str {
+        match self {
+            TrashAnomaly::ContentPurged { original_path }
+            | TrashAnomaly::PathTraversal { original_path }
+            | TrashAnomaly::DeletionTimeMissing { original_path } => original_path,
+        }
+    }
+
+    /// Human-readable, consistent-with note.
+    fn note(&self) -> String {
+        match self {
+            TrashAnomaly::ContentPurged { original_path } => format!(
+                "`.trashinfo` metadata for {original_path} survives but its `files/` content \
+                 is absent — consistent with the content having been purged while its metadata \
+                 remains"
+            ),
+            TrashAnomaly::PathTraversal { original_path } => format!(
+                "stored Path= {original_path} contains a parent-directory ('..') component, \
+                 which the Trash spec forbids — consistent with a crafted entry rather than a \
+                 normal deletion"
+            ),
+            TrashAnomaly::DeletionTimeMissing { original_path } => format!(
+                "DeletionDate= for {original_path} was absent or unparseable — the deletion \
+                 time is unknown"
+            ),
+        }
+    }
+
+    /// Convert this anomaly into a canonical [`Finding`].
+    fn to_finding(&self, source: Source) -> Finding {
+        let path = self.original_path().to_string();
+        Finding::observation(self.severity(), self.category(), self.code())
+            .note(self.note())
+            .source(source)
+            .evidence_item(Evidence {
+                field: "original_path".to_string(),
+                value: path.clone(),
+                location: Some(Location::Path(path)),
+            })
+            .build()
+    }
+}
+
+/// Build the [`Source`] stamped on every finding (analyzer + version + scope).
+fn source_for(entry: &TrashEntry) -> Source {
+    let scope = entry
+        .info_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("info")
+        .to_string();
+    Source {
+        analyzer: ANALYZER.to_string(),
+        scope,
+        version: Some(env!("CARGO_PKG_VERSION").to_string()),
+    }
+}
+
 /// Audit a parsed `.trashinfo` record together with its `info/`↔`files/` pairing,
 /// returning a canonical [`Finding`] for each anomaly detected.
 ///
@@ -48,7 +136,31 @@ pub enum TrashAnomaly {
 /// content and a deletion time yields no findings.
 #[must_use]
 pub fn audit_entry(info: &TrashInfo, entry: &TrashEntry) -> Vec<Finding> {
-    todo!("RED: audit_entry not yet implemented: {info:?} {entry:?}")
+    let source = source_for(entry);
+    let mut anomalies = Vec::new();
+
+    if entry.content_path.is_none() {
+        anomalies.push(TrashAnomaly::ContentPurged {
+            original_path: info.original_path.clone(),
+        });
+    }
+
+    if has_path_traversal(&info.original_path) {
+        anomalies.push(TrashAnomaly::PathTraversal {
+            original_path: info.original_path.clone(),
+        });
+    }
+
+    if info.deleted_at.is_none() {
+        anomalies.push(TrashAnomaly::DeletionTimeMissing {
+            original_path: info.original_path.clone(),
+        });
+    }
+
+    anomalies
+        .iter()
+        .map(|a| a.to_finding(source.clone()))
+        .collect()
 }
 
 #[cfg(test)]
