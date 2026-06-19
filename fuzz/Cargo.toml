@@ -21,6 +21,30 @@ path = "fuzz_targets/fuzz_forensic.rs"
 test = false
 doc  = false
 
+[[bin]]
+name = "fuzz_parse_trashinfo"
+path = "fuzz_targets/fuzz_parse_trashinfo.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_parse_dsstore"
+path = "fuzz_targets/fuzz_parse_dsstore.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_parse_trashed_name"
+path = "fuzz_targets/fuzz_parse_trashed_name.rs"
+test = false
+doc  = false
+
+[[bin]]
+name = "fuzz_ios_photos"
+path = "fuzz_targets/fuzz_ios_photos.rs"
+test = false
+doc  = false
+
 [dependencies]
 libfuzzer-sys   = "0.4"
 trash-core = { path = "../trash-core" }
