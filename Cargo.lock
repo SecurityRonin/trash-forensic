@@ -135,6 +135,7 @@ dependencies = [
 name = "trash-forensic"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "forensicnomicon",
  "serde",
  "trash-core",

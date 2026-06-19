@@ -25,5 +25,9 @@ trash-core = { workspace = true }
 forensicnomicon = { workspace = true }
 serde           = { workspace = true, optional = true }
 
+[dev-dependencies]
+# Constructing `TrashInfo { deleted_at: Option<NaiveDateTime> }` in analyzer tests.
+chrono = { workspace = true }
+
 [lints]
 workspace = true

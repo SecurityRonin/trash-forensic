@@ -33,8 +33,14 @@
 #[cfg(feature = "windows")]
 pub mod windows;
 
+#[cfg(feature = "linux")]
+pub mod linux;
+
 #[cfg(feature = "windows")]
 pub use windows::{audit_pair, AnomalyKind};
+
+#[cfg(feature = "linux")]
+pub use linux::{audit_entry, TrashAnomaly};
 
 /// Analyzer name, recorded on every finding's [`forensicnomicon::report::Source`]
 /// for reproducibility, shared across the per-OS analyzers.
