@@ -6,6 +6,7 @@
 //! |---|---|---|
 //! | [`windows`] | `windows` | Recycle Bin `$I`/`$R` index + content files |
 //! | [`linux`] | `linux` | freedesktop.org / XDG `info/*.trashinfo` + `files/` |
+//! | [`macos`] | `macos` | Trash `.DS_Store` put-back records (`ptbN`/`ptbL`) |
 //!
 //! Every module is gated behind a same-named Cargo feature; all are enabled by
 //! default. A consumer that only needs one platform builds with
@@ -29,6 +30,9 @@ pub mod windows;
 
 #[cfg(feature = "linux")]
 pub mod linux;
+
+#[cfg(feature = "macos")]
+pub mod macos;
 
 #[cfg(feature = "windows")]
 pub use windows::{parse_index, scan_pairs, Error, IndexVersion, RecycleBinIndex, RecycleBinPair};
