@@ -36,6 +36,69 @@ pub enum IosAssetAnomaly {
     },
 }
 
+impl IosAssetAnomaly {
+    /// Stable, scheme-prefixed machine code (a published contract).
+    fn code(&self) -> &'static str {
+        match self {
+            IosAssetAnomaly::DeletionTimeMissing { .. } => "TRASH-DELETION-TIME-MISSING",
+            IosAssetAnomaly::ExpiredResidue { .. } => "TRASH-EXPIRED-RESIDUE",
+        }
+    }
+
+    /// Analytical lens for the anomaly.
+    fn category(&self) -> Category {
+        match self {
+            IosAssetAnomaly::DeletionTimeMissing { .. } => Category::Integrity,
+            IosAssetAnomaly::ExpiredResidue { .. } => Category::Residue,
+        }
+    }
+
+    /// Canonical severity for the anomaly.
+    fn severity(&self) -> Severity {
+        match self {
+            IosAssetAnomaly::DeletionTimeMissing { .. } => Severity::Medium,
+            IosAssetAnomaly::ExpiredResidue { .. } => Severity::Low,
+        }
+    }
+
+    /// The asset reference (filename or `Z_PK <rowid>`), common to both variants.
+    fn evidence(&self) -> &str {
+        match self {
+            IosAssetAnomaly::DeletionTimeMissing { evidence }
+            | IosAssetAnomaly::ExpiredResidue { evidence } => evidence,
+        }
+    }
+
+    /// Human-readable, consistent-with note.
+    fn note(&self) -> String {
+        match self {
+            IosAssetAnomaly::DeletionTimeMissing { evidence } => format!(
+                "Photos asset {evidence} is flagged trashed (ZTRASHEDSTATE=1) but carries no \
+                 ZTRASHEDDATE — the deletion time is unknown"
+            ),
+            IosAssetAnomaly::ExpiredResidue { evidence } => format!(
+                "Photos asset {evidence} is still in Recently Deleted past its ~30-day retention \
+                 — consistent with the asset having outlived the nominal purge and remaining \
+                 recoverable"
+            ),
+        }
+    }
+
+    /// Convert this anomaly into a canonical [`Finding`].
+    fn to_finding(&self, source: Source) -> Finding {
+        let value = self.evidence().to_string();
+        Finding::observation(self.severity(), self.category(), self.code())
+            .note(self.note())
+            .source(source)
+            .evidence_item(Evidence {
+                field: "asset".to_string(),
+                value: value.clone(),
+                location: Some(Location::Path(value)),
+            })
+            .build()
+    }
+}
+
 /// Audit one trashed Photos asset. `now` is the reference time the retention
 /// window is measured against (the caller passes the acquisition/analysis time).
 ///
@@ -44,7 +107,33 @@ pub enum IosAssetAnomaly {
 /// timestamp yields no findings.
 #[must_use]
 pub fn audit_trashed_asset(asset: &TrashedAsset, now: DateTime<Utc>) -> Vec<Finding> {
-    todo!("RED: audit_trashed_asset not yet implemented: {asset:?} {now}")
+    let reference = asset
+        .filename
+        .clone()
+        .unwrap_or_else(|| format!("Z_PK {}", asset.rowid));
+
+    let mut anomalies = Vec::new();
+    match asset.trashed_at {
+        None => anomalies.push(IosAssetAnomaly::DeletionTimeMissing {
+            evidence: reference.clone(),
+        }),
+        Some(trashed_at) if now - trashed_at > Duration::days(RETENTION_DAYS) => {
+            anomalies.push(IosAssetAnomaly::ExpiredResidue {
+                evidence: reference.clone(),
+            });
+        }
+        Some(_) => {}
+    }
+
+    let source = Source {
+        analyzer: ANALYZER.to_string(),
+        scope: reference,
+        version: Some(env!("CARGO_PKG_VERSION").to_string()),
+    };
+    anomalies
+        .iter()
+        .map(|a| a.to_finding(source.clone()))
+        .collect()
 }
 
 #[cfg(test)]
