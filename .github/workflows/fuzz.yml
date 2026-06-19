@@ -13,6 +13,12 @@ on:
 jobs:
   fuzz:
     runs-on: ubuntu-latest
+    # cargo-fuzz needs nightly (-Z sanitizer=address). RUSTUP_TOOLCHAIN overrides
+    # the repo's rust-toolchain.toml 1.96.0 pin for every cargo/rustc call,
+    # including the build cargo-fuzz spawns (a bare `cargo +nightly` would not —
+    # the nested build re-reads the toolchain file and reverts to 1.96.0).
+    env:
+      RUSTUP_TOOLCHAIN: nightly
     strategy:
       fail-fast: false
       matrix:

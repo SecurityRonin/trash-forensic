@@ -40,4 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: EmbarkStudios/cargo-deny-action@34899fc7ba81ca6268d5947a7a16b4649013fea1 # v2
+      # Run cargo-deny on the normal runner (not the action's musl container, where
+      # the rust-toolchain.toml 1.96.0 pin resolves to an uninstalled -musl host)
+      # with a current cargo-deny that parses the latest advisory-db entries.
+      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+        with:
+          toolchain: 1.96.0
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check
