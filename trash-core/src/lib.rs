@@ -8,6 +8,7 @@
 //! | [`linux`] | `linux` | freedesktop.org / XDG `info/*.trashinfo` + `files/` |
 //! | [`macos`] | `macos` | Trash `.DS_Store` put-back records (`ptbN`/`ptbL`) |
 //! | [`android`] | `android` | `MediaStore` `.trashed-`/`.pending-` filename codec |
+//! | [`ios`] | `ios` | Photos.sqlite `ZASSET` Recently-Deleted rows |
 //!
 //! Every module is gated behind a same-named Cargo feature; all are enabled by
 //! default. A consumer that only needs one platform builds with
@@ -37,6 +38,9 @@ pub mod macos;
 
 #[cfg(feature = "android")]
 pub mod android;
+
+#[cfg(feature = "ios")]
+pub mod ios;
 
 #[cfg(feature = "windows")]
 pub use windows::{parse_index, scan_pairs, Error, IndexVersion, RecycleBinIndex, RecycleBinPair};

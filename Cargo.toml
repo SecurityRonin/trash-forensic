@@ -22,6 +22,8 @@ thiserror       = "2"
 serde           = { version = "1", features = ["derive"] }
 # RFC 2396 percent-decoding for the Linux XDG `.trashinfo` `Path=` field.
 percent-encoding = "2"
+# Pure-Rust (no libsqlite3) SQLite reader for the iOS Photos.sqlite trash table.
+sqlite-core = "0.1"
 
 # Paranoid Gatekeeper: these crates parse untrusted, attacker-controllable `$I`
 # index files. Never panic, never read out of bounds, never trust a length.
