@@ -1,7 +1,10 @@
 //! Integration tests for the `$I` index parser, validated against fixtures whose
 //! bytes were hand-built strictly per the libyal spec and cross-checked with the
 //! independent `rifiuti-vista` oracle (see `tests/data/README.md`).
+//!
+//! Exercises the Windows `$I` reader, so it is gated to the `windows` feature.
 
+#![cfg(feature = "windows")]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use chrono::{TimeZone, Utc};

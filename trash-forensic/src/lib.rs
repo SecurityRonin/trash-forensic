@@ -13,9 +13,10 @@
 //! are observations, never legal conclusions: the analyst concludes.
 //!
 //! ```no_run
+//! # #[cfg(feature = "windows")]
+//! # fn demo(dir: &std::path::Path) -> std::io::Result<()> {
 //! use trash_core::{parse_index, scan_pairs};
 //! use trash_forensic::audit_pair;
-//! # fn demo(dir: &std::path::Path) -> std::io::Result<()> {
 //! for pair in scan_pairs(dir)? {
 //!     let bytes = std::fs::read(&pair.index_path)?;
 //!     if let Ok(index) = parse_index(&bytes) {

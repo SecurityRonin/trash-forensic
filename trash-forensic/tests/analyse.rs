@@ -1,5 +1,9 @@
 //! Analyzer tests: each anomaly maps to a canonical forensicnomicon Finding.
+//!
+//! Exercises the Windows analyzer, so it is gated to the `windows` feature; under
+//! a feature set without `windows` (e.g. `--features ios`) the file compiles empty.
 
+#![cfg(feature = "windows")]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::path::PathBuf;
