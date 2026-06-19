@@ -1,4 +1,4 @@
-//! Read-only decoder for the Android **MediaStore trash** filename convention.
+//! Read-only decoder for the Android **`MediaStore` trash** filename convention.
 //!
 //! On Android 11+ (API 30) the system-level, vendor-independent trash renames a
 //! media file *in place* to a self-describing hidden name:
@@ -8,10 +8,10 @@
 //! ```
 //!
 //! with a 7-day sibling mechanism using the `pending` prefix. Because the
-//! MediaProvider rebuilds its `files`-table row *from this name* on rescan, the
+//! `MediaProvider` rebuilds its `files`-table row *from this name* on rescan, the
 //! name alone recovers the original filename and the expiry time **even if the
 //! database is wiped**. This module decodes that name; correlating it with the
-//! `external.db` `files` table is a separate (SQLite) concern.
+//! `external.db` `files` table is a separate (`SQLite`) concern.
 //!
 //! # Codec (authoritative)
 //!
@@ -31,7 +31,7 @@
 
 use chrono::{DateTime, TimeZone, Utc};
 
-/// Whether a MediaStore name encodes the 30-day **trashed** state or the 7-day
+/// Whether a `MediaStore` name encodes the 30-day **trashed** state or the 7-day
 /// **pending** state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -55,7 +55,7 @@ impl TrashState {
     }
 }
 
-/// A decoded MediaStore `.trashed-`/`.pending-` filename.
+/// A decoded `MediaStore` `.trashed-`/`.pending-` filename.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TrashedName {
@@ -72,7 +72,7 @@ impl TrashedName {
     /// value is outside the representable range.
     #[must_use]
     pub fn expires_at(&self) -> Option<DateTime<Utc>> {
-        todo!("RED: expires_at not yet implemented")
+        Utc.timestamp_opt(self.date_expires, 0).single()
     }
 
     /// The **inferred** deletion instant: `dateExpires` minus the state's default
@@ -80,7 +80,10 @@ impl TrashedName {
     /// override the duration), so it is an inference, not a recorded fact.
     #[must_use]
     pub fn inferred_deleted_at(&self) -> Option<DateTime<Utc>> {
-        todo!("RED: inferred_deleted_at not yet implemented")
+        let secs = self
+            .date_expires
+            .checked_sub(self.state.default_retention_secs())?;
+        Utc.timestamp_opt(secs, 0).single()
     }
 }
 
@@ -90,7 +93,40 @@ impl TrashedName {
 /// carries a trashed/pending prefix is a malformed-token anomaly.
 #[must_use]
 pub fn parse_trashed_name(name: &str) -> Option<TrashedName> {
-    todo!("RED: parse_trashed_name not yet implemented: {name}")
+    let rest = name.strip_prefix('.')?;
+    let (state, after) = strip_state_prefix(rest)?;
+    // The display name is everything after the SECOND `-`, so split on the first
+    // `-` of `after` (which holds `<digits>-<name>`).
+    let (digits, original) = after.split_once('-')?;
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let date_expires = digits.parse::<i64>().ok()?;
+    if original.is_empty() || original.contains('/') {
+        return None;
+    }
+    Some(TrashedName {
+        state,
+        date_expires,
+        original_name: original.to_string(),
+    })
+}
+
+/// Strip a case-insensitive `trashed-`/`pending-` prefix, returning the state and
+/// the remainder. Boundary-safe: a leading multi-byte character yields `None`.
+fn strip_state_prefix(rest: &str) -> Option<(TrashState, &str)> {
+    for (prefix, state) in [
+        ("trashed-", TrashState::Trashed),
+        ("pending-", TrashState::Pending),
+    ] {
+        let Some(head) = rest.get(..prefix.len()) else {
+            continue;
+        };
+        if head.eq_ignore_ascii_case(prefix) {
+            return rest.get(prefix.len()..).map(|tail| (state, tail));
+        }
+    }
+    None
 }
 
 #[cfg(test)]

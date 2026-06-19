@@ -7,7 +7,7 @@
 //! | [`windows`] | `windows` | Recycle Bin `$I`/`$R` index + content files |
 //! | [`linux`] | `linux` | freedesktop.org / XDG `info/*.trashinfo` + `files/` |
 //! | [`macos`] | `macos` | Trash `.DS_Store` put-back records (`ptbN`/`ptbL`) |
-//! | [`android`] | `android` | MediaStore `.trashed-`/`.pending-` filename codec |
+//! | [`android`] | `android` | `MediaStore` `.trashed-`/`.pending-` filename codec |
 //!
 //! Every module is gated behind a same-named Cargo feature; all are enabled by
 //! default. A consumer that only needs one platform builds with
