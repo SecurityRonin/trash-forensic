@@ -138,7 +138,7 @@ dependencies = [
 
 [[package]]
 name = "trash-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "percent-encoding",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "trash-forensic"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "forensicnomicon 0.5.7",

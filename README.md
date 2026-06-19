@@ -16,7 +16,7 @@
 
 ```toml
 [dependencies]
-trash-forensic = "0.1"   # pulls in trash-core; all five OS readers on by default
+trash-forensic = "0.2"   # pulls in trash-core; all five OS readers on by default
 ```
 
 ```rust

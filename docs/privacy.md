@@ -8,7 +8,7 @@ trash-forensic is a local Rust library. It does not collect, transmit, or store 
 
 ## Data Access
 
-trash-forensic reads only the file bytes you pass to it (Recycle Bin `$I`/`$R` artifacts). All processing happens in memory on your local machine. Nothing is uploaded anywhere.
+trash-forensic reads only the file bytes you pass to it (Windows, Linux, macOS, Android, and iOS trash artifacts). All processing happens in memory on your local machine. Nothing is uploaded anywhere.
 
 ## Telemetry
 

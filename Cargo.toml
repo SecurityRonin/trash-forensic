@@ -5,7 +5,7 @@ members = ["trash-core", "trash-forensic"]
 # Single source of truth for fields shared by every member (DRY): bump version /
 # MSRV / license here once; members inherit via `field.workspace = true`.
 [workspace.package]
-version      = "0.1.0"
+version      = "0.2.0"
 edition      = "2021"
 rust-version = "1.96"
 license      = "Apache-2.0"
@@ -15,7 +15,7 @@ repository   = "https://github.com/SecurityRonin/trash-forensic"
 # members write `dep.workspace = true`. The inter-crate `trash-core`
 # version lives here too, so a bump touches one line.
 [workspace.dependencies]
-trash-core = { path = "trash-core", version = "0.1.0" }
+trash-core = { path = "trash-core", version = "0.2.0" }
 forensicnomicon = "0.5"
 chrono          = { version = "0.4", default-features = false, features = ["std"] }
 thiserror       = "2"

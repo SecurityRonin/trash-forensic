@@ -1,17 +1,30 @@
 # trash-forensic
 
-Windows Recycle Bin `$I` index reader + forensic analyzer.
+Read-only readers + forensic analyzers for **trash / deleted-file artifacts
+across Windows, Linux, macOS, Android, and iOS**.
 
-When a file is sent to the Recycle Bin on Windows Vista and later, the shell
-writes a `$I…` index file (the deleted file's original path, size, and deletion
-time) and a `$R…` content file. This repo is two crates:
+Every major OS keeps a record of recently deleted files somewhere — a Windows
+`$Recycle.Bin`, a Linux XDG trash, a macOS Trash `.DS_Store`, an Android
+`.trashed-` rename, an iOS `Photos.sqlite` row. This repo decodes each of them to
+a deleted-item record and grades it for tampering, in two crates:
 
-- **`trash-core`** — the reader. Parses the `$I` index format (version 1
-  pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs
-  `$I`/`$R` files by a directory scan. No findings.
-- **`trash-forensic`** — the analyzer. Emits canonical
+- **`trash-core`** — the readers. One module per OS, each gated behind a
+  same-named Cargo feature (all on by default), decoding its native artifact to a
+  typed record and pairing metadata with content. No findings.
+- **`trash-forensic`** — the analyzers. Emit canonical
   [`forensicnomicon`](https://crates.io/crates/forensicnomicon) findings for
-  purged content, path-traversal stored names, and missing deletion times.
+  purged content, path-traversal stored names, missing deletion times, and
+  expired residue.
+
+## Coverage
+
+| OS | Artifact | Reader |
+|---|---|---|
+| Windows | `$Recycle.Bin\<SID>\` `$I` ⇄ `$R` | `windows::parse_index` + `scan_pairs` |
+| Linux | XDG `Trash/info/*.trashinfo` ⇄ `files/` | `linux::parse_trashinfo` + `scan_trash` |
+| macOS | Trash `.DS_Store` put-back (`ptbN`/`ptbL`) | `macos::parse_put_back` |
+| Android | `MediaStore` `.trashed-<expiry>-<name>` | `android::parse_trashed_name` |
+| iOS | `Photos.sqlite` `ZASSET.ZTRASHEDSTATE` | `ios::parse_trashed_assets` |
 
 ## Quick start
 
@@ -34,16 +47,24 @@ for pair in scan_pairs(recycle_bin_dir)? {
 
 ## Findings
 
-| Code | Category | Severity | Meaning |
+| Code | Category | Severity | Platforms |
 |---|---|---|---|
-| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | `$I` metadata survives but `$R` is gone |
-| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | stored path escapes its directory (`..\`) |
-| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | the deletion `FILETIME` is zero |
+| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | Windows |
+| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | Windows |
+| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | Windows |
+| `TRASH-CONTENT-PURGED` | Residue | Medium | Linux |
+| `TRASH-PATH-TRAVERSAL` | Concealment | High | Linux |
+| `TRASH-DELETION-TIME-MISSING` | Integrity | Medium | Linux, iOS |
+| `TRASH-ORPHAN-METADATA` | Residue | Medium | macOS |
+| `TRASH-PUTBACK-TRAVERSAL` | Concealment | High | macOS |
+| `TRASH-EXPIRED-RESIDUE` | Residue | Low | Android, iOS |
+| `TRASH-MALFORMED-NAME` | Structure | Low | Android |
 
 Findings are observations, never legal conclusions.
 
 ## Robustness
 
-`$I` bytes are treated as attacker-controlled — the reader is panic-free,
-bounds-checked, allocation-capped, and fuzzed. See [Validation](validation.md)
-for the spec citation and the independent rifiuti2 oracle cross-check.
+Every reader treats its input as attacker-controlled — bounds-checked,
+allocation-capped, cycle-guarded (the macOS B-tree walk), panic-free, and fuzzed.
+`unsafe` is forbidden workspace-wide. See [Validation](validation.md) for each
+platform's authoritative spec and independent-oracle cross-check.
