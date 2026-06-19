@@ -15,11 +15,12 @@ readme       = "README.md"
 exclude      = ["tests/data/", "fuzz/"]
 
 [features]
-default = ["windows", "linux", "macos"]
+default = ["windows", "linux", "macos", "android"]
 # Per-OS readers, each gated so a single-platform consumer drops the rest's deps.
 windows = []
 linux = ["dep:percent-encoding"]
 macos = []
+android = []
 serde = ["dep:serde", "chrono/serde"]
 
 [dependencies]
