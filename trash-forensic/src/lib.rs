@@ -36,11 +36,17 @@ pub mod windows;
 #[cfg(feature = "linux")]
 pub mod linux;
 
+#[cfg(feature = "macos")]
+pub mod macos;
+
 #[cfg(feature = "windows")]
 pub use windows::{audit_pair, AnomalyKind};
 
 #[cfg(feature = "linux")]
 pub use linux::{audit_entry, TrashAnomaly};
+
+#[cfg(feature = "macos")]
+pub use macos::{audit_put_back, DsStoreAnomaly};
 
 /// Analyzer name, recorded on every finding's [`forensicnomicon::report::Source`]
 /// for reproducibility, shared across the per-OS analyzers.
@@ -50,7 +56,7 @@ pub const ANALYZER: &str = "trash-forensic";
 /// both Windows (`\`) and POSIX (`/`) separators. Matches `..` only as a whole
 /// path component, so a filename like `my..notes.txt` is not flagged. Shared by
 /// every platform analyzer (path traversal is a cross-platform concealment tell).
-#[cfg(any(feature = "windows", feature = "linux"))]
+#[cfg(any(feature = "windows", feature = "linux", feature = "macos"))]
 pub(crate) fn has_path_traversal(path: &str) -> bool {
     path.split(['\\', '/']).any(|component| component == "..")
 }
