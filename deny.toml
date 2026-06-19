@@ -17,10 +17,6 @@ allow = [
 [bans]
 multiple-versions = "deny"
 wildcards = "deny"
-# `sqlite-core` 0.1.0 (the iOS Photos.sqlite engine) pins forensicnomicon 0.4 while
-# trash-forensic uses 0.5. The duplicate is transitive and isolated — trash-core's
-# iOS reader uses sqlite-core's Database/Value types, not its forensicnomicon types.
-skip = [{ name = "forensicnomicon", version = "<0.5" }]
 
 [sources]
 unknown-registry = "deny"

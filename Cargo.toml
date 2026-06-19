@@ -5,7 +5,7 @@ members = ["trash-core", "trash-forensic"]
 # Single source of truth for fields shared by every member (DRY): bump version /
 # MSRV / license here once; members inherit via `field.workspace = true`.
 [workspace.package]
-version      = "0.2.0"
+version      = "0.2.1"
 edition      = "2021"
 rust-version = "1.96"
 license      = "Apache-2.0"
@@ -15,7 +15,7 @@ repository   = "https://github.com/SecurityRonin/trash-forensic"
 # members write `dep.workspace = true`. The inter-crate `trash-core`
 # version lives here too, so a bump touches one line.
 [workspace.dependencies]
-trash-core = { path = "trash-core", version = "0.2.0" }
+trash-core = { path = "trash-core", version = "0.2.1" }
 forensicnomicon = "0.5"
 chrono          = { version = "0.4", default-features = false, features = ["std"] }
 thiserror       = "2"
@@ -23,7 +23,9 @@ serde           = { version = "1", features = ["derive"] }
 # RFC 2396 percent-decoding for the Linux XDG `.trashinfo` `Path=` field.
 percent-encoding = "2"
 # Pure-Rust (no libsqlite3) SQLite reader for the iOS Photos.sqlite trash table.
-sqlite-core = "0.1"
+# 0.2 aligns on forensicnomicon 0.5 (matches this workspace), so the tree carries
+# a single forensicnomicon version — no duplicate.
+sqlite-core = "0.2"
 
 # Paranoid Gatekeeper: these crates parse untrusted, attacker-controllable `$I`
 # index files. Never panic, never read out of bounds, never trust a length.
