@@ -21,6 +21,7 @@ serde = ["dep:serde", "chrono/serde"]
 chrono    = { workspace = true }
 thiserror = { workspace = true }
 serde     = { workspace = true, optional = true }
+percent-encoding = { workspace = true }
 
 [lints]
 workspace = true

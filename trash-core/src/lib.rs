@@ -38,6 +38,10 @@
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
+/// Linux FreeDesktop / XDG `.trashinfo` reader. The crate-root items below read
+/// the Windows Recycle Bin `$I` format; per-OS readers live in their own modules.
+pub mod linux;
+
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, TimeZone, Utc};

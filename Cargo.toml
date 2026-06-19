@@ -20,6 +20,8 @@ forensicnomicon = "0.5"
 chrono          = { version = "0.4", default-features = false, features = ["std"] }
 thiserror       = "2"
 serde           = { version = "1", features = ["derive"] }
+# RFC 2396 percent-decoding for the Linux XDG `.trashinfo` `Path=` field.
+percent-encoding = "2"
 
 # Paranoid Gatekeeper: these crates parse untrusted, attacker-controllable `$I`
 # index files. Never panic, never read out of bounds, never trust a length.
