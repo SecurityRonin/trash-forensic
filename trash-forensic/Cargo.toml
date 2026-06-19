@@ -14,21 +14,21 @@ documentation = "https://docs.rs/trash-forensic"
 readme       = "README.md"
 
 [features]
-default = ["windows", "linux", "macos"]
+default = ["windows", "linux", "macos", "android"]
 # Per-OS analyzers; each pulls the matching `trash-core` reader feature.
 windows = ["trash-core/windows"]
 linux = ["trash-core/linux"]
 macos = ["trash-core/macos"]
+android = ["trash-core/android"]
 serde = ["dep:serde", "trash-core/serde", "forensicnomicon/serde"]
 
 [dependencies]
 trash-core = { workspace = true }
 forensicnomicon = { workspace = true }
 serde           = { workspace = true, optional = true }
-
-[dev-dependencies]
-# Constructing `TrashInfo { deleted_at: Option<NaiveDateTime> }` in analyzer tests.
-chrono = { workspace = true }
+# The Android analyzer compares an item's expiry against an injected reference
+# time; also used to build NaiveDateTime/DateTime values in analyzer tests.
+chrono          = { workspace = true }
 
 [lints]
 workspace = true
