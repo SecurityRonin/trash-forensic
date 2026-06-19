@@ -35,6 +35,78 @@ pub enum DsStoreAnomaly {
     },
 }
 
+impl DsStoreAnomaly {
+    /// Stable, scheme-prefixed machine code (a published contract).
+    fn code(&self) -> &'static str {
+        match self {
+            DsStoreAnomaly::OrphanMetadata { .. } => "TRASH-ORPHAN-METADATA",
+            DsStoreAnomaly::PutBackTraversal { .. } => "TRASH-PUTBACK-TRAVERSAL",
+        }
+    }
+
+    /// Canonical severity for the anomaly.
+    fn severity(&self) -> Severity {
+        match self {
+            DsStoreAnomaly::OrphanMetadata { .. } => Severity::Medium,
+            DsStoreAnomaly::PutBackTraversal { .. } => Severity::High,
+        }
+    }
+
+    /// Analytical lens for the anomaly.
+    fn category(&self) -> Category {
+        match self {
+            DsStoreAnomaly::OrphanMetadata { .. } => Category::Residue,
+            DsStoreAnomaly::PutBackTraversal { .. } => Category::Concealment,
+        }
+    }
+
+    /// The evidence field name + offending value carried into the finding.
+    fn evidence(&self) -> (&'static str, &str) {
+        match self {
+            DsStoreAnomaly::OrphanMetadata { evidence } => ("original_path", evidence),
+            DsStoreAnomaly::PutBackTraversal { offending } => ("put_back_path", offending),
+        }
+    }
+
+    /// Human-readable, consistent-with note.
+    fn note(&self) -> String {
+        match self {
+            DsStoreAnomaly::OrphanMetadata { evidence } => format!(
+                "a .DS_Store put-back record for {evidence} survives but the item is absent from \
+                 the Trash — consistent with the content having been emptied while its metadata \
+                 remains"
+            ),
+            DsStoreAnomaly::PutBackTraversal { offending } => format!(
+                "stored put-back path {offending} contains a parent-directory ('..') component — \
+                 consistent with a crafted record whose restore would escape the intended tree"
+            ),
+        }
+    }
+
+    /// Convert this anomaly into a canonical [`Finding`].
+    fn to_finding(&self, source: Source) -> Finding {
+        let (field, value) = self.evidence();
+        Finding::observation(self.severity(), self.category(), self.code())
+            .note(self.note())
+            .source(source)
+            .evidence_item(Evidence {
+                field: field.to_string(),
+                value: value.to_string(),
+                location: Some(Location::Path(value.to_string())),
+            })
+            .build()
+    }
+}
+
+/// Build the [`Source`] stamped on every finding (analyzer + version + scope).
+fn source_for(record: &PutBack) -> Source {
+    Source {
+        analyzer: ANALYZER.to_string(),
+        scope: record.trash_name.clone(),
+        version: Some(env!("CARGO_PKG_VERSION").to_string()),
+    }
+}
+
 /// Audit a recovered macOS put-back record. `item_present` is whether the item
 /// named by [`PutBack::trash_name`] still exists in the Trash directory (the
 /// caller lists the directory; the `.DS_Store` itself does not).
@@ -44,7 +116,34 @@ pub enum DsStoreAnomaly {
 /// findings.
 #[must_use]
 pub fn audit_put_back(record: &PutBack, item_present: bool) -> Vec<Finding> {
-    todo!("RED: audit_put_back not yet implemented: {record:?} present={item_present}")
+    let source = source_for(record);
+    let mut anomalies = Vec::new();
+
+    if !item_present {
+        let evidence = record
+            .original_path()
+            .unwrap_or_else(|| record.trash_name.clone());
+        anomalies.push(DsStoreAnomaly::OrphanMetadata { evidence });
+    }
+
+    // One traversal finding per record, whether the `..` is in `ptbL` or `ptbN`.
+    if let Some(offending) = [
+        record.original_location.as_deref(),
+        record.original_name.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .find(|value| has_path_traversal(value))
+    {
+        anomalies.push(DsStoreAnomaly::PutBackTraversal {
+            offending: offending.to_string(),
+        });
+    }
+
+    anomalies
+        .iter()
+        .map(|a| a.to_finding(source.clone()))
+        .collect()
 }
 
 #[cfg(test)]
