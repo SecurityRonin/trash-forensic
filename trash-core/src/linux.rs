@@ -90,7 +90,81 @@ pub struct TrashInfo {
 /// present. A missing or unparseable `DeletionDate=` is **not** an error — it
 /// yields `deleted_at == None`. Never panics on hostile input.
 pub fn parse_trashinfo(data: &[u8]) -> Result<TrashInfo, TrashInfoError> {
-    todo!("RED: parse_trashinfo not yet implemented")
+    // `.trashinfo` files are ASCII (the path is percent-encoded), so a lossy
+    // UTF-8 view is faithful; any stray non-UTF-8 byte becomes U+FFFD rather than
+    // aborting the parse.
+    let text = String::from_utf8_lossy(strip_utf8_bom(data));
+    let mut lines = text.lines();
+
+    // The first non-blank line must be the `[Trash Info]` group header. Advancing
+    // `lines` by reference leaves the iterator positioned just after the header so
+    // the key/value scan below resumes from the next line.
+    let header = lines
+        .by_ref()
+        .find(|line| !line.trim().is_empty())
+        .map_or("", str::trim);
+    if !header.eq_ignore_ascii_case("[Trash Info]") {
+        return Err(TrashInfoError::MissingHeader {
+            found: header.to_string(),
+        });
+    }
+
+    // First `Path=` and first `DeletionDate=` win (spec footnote [8]).
+    let mut path_enc: Option<&str> = None;
+    let mut date_raw: Option<&str> = None;
+    for line in lines {
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let (key, value) = (key.trim(), value.trim());
+        if path_enc.is_none() && key == "Path" {
+            path_enc = Some(value);
+        } else if date_raw.is_none() && key == "DeletionDate" {
+            date_raw = Some(value);
+        }
+    }
+
+    let Some(path_enc) = path_enc else {
+        return Err(TrashInfoError::MissingPath);
+    };
+
+    // RFC 2396 percent-decoding (not form encoding): `%XX` -> byte, `+` left
+    // literal. Decoded bytes are interpreted as UTF-8 lossily.
+    let original_path = percent_decode_str(path_enc)
+        .decode_utf8_lossy()
+        .into_owned();
+    let deleted_at = date_raw.and_then(parse_deletion_date);
+
+    Ok(TrashInfo {
+        original_path,
+        deleted_at,
+    })
+}
+
+/// Strip a leading UTF-8 BOM (`EF BB BF`) if present.
+fn strip_utf8_bom(data: &[u8]) -> &[u8] {
+    data.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(data)
+}
+
+/// Parse a `DeletionDate=` value as naive local time, accepting both the extended
+/// `YYYY-MM-DDThh:mm:ss` form real writers emit and the basic `YYYYMMDDThh:mm:ss`
+/// form the spec's own example uses. Returns `None` for any unparseable value.
+fn parse_deletion_date(value: &str) -> Option<NaiveDateTime> {
+    const FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
+    if let Ok(dt) = NaiveDateTime::parse_from_str(value, FORMAT) {
+        return Some(dt);
+    }
+    // chrono's `%Y` consumes digits greedily, so the basic form cannot be parsed
+    // directly against a separator-less pattern; normalise it to the extended
+    // form (`YYYYMMDD` -> `YYYY-MM-DD`) and reparse.
+    let (date, time) = value.split_once('T')?;
+    if date.len() == 8 && date.bytes().all(|b| b.is_ascii_digit()) {
+        let normalised = format!("{}-{}-{}T{}", &date[0..4], &date[4..6], &date[6..8], time);
+        if let Ok(dt) = NaiveDateTime::parse_from_str(&normalised, FORMAT) {
+            return Some(dt);
+        }
+    }
+    None
 }
 
 /// A trashed item discovered by scanning a trash directory: its `info/` metadata
@@ -115,7 +189,28 @@ pub struct TrashEntry {
 ///
 /// Propagates any I/O error from reading the `info/` directory.
 pub fn scan_trash(trash_dir: &Path) -> std::io::Result<Vec<TrashEntry>> {
-    todo!("RED: scan_trash not yet implemented")
+    let info_dir = trash_dir.join("info");
+    let files_dir = trash_dir.join("files");
+    let mut entries = Vec::new();
+    for entry in std::fs::read_dir(&info_dir)? {
+        let entry = entry?; // cov:unreachable: per-entry `?` needs a mid-scan I/O fault tests cannot force
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue; // cov:unreachable: non-UTF-8 entry is OS-specific, not portably constructible
+        };
+        let Some(stem) = name.strip_suffix(".trashinfo") else {
+            continue;
+        };
+        let candidate = files_dir.join(stem);
+        // A trashed directory exists as a directory in `files/`, so test for
+        // existence rather than file-ness.
+        let content_path = candidate.exists().then_some(candidate);
+        entries.push(TrashEntry {
+            info_path: entry.path(),
+            content_path,
+        });
+    }
+    Ok(entries)
 }
 
 #[cfg(test)]
