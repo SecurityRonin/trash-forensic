@@ -1,0 +1,25 @@
+[package]
+name         = "recyclebin-forensic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description  = "Forensic anomaly analysis for Windows Recycle Bin $I/$R artifacts — purged-content detection, path-traversal in stored names, and deletion-time anomalies, emitting forensicnomicon findings"
+license.workspace = true
+authors      = ["Albert Hui <albert@securityronin.com>"]
+keywords     = ["forensics", "recycle-bin", "windows", "dfir", "anti-forensics"]
+categories   = ["parser-implementations"]
+repository.workspace = true
+homepage     = "https://github.com/SecurityRonin/recyclebin-forensic"
+documentation = "https://docs.rs/recyclebin-forensic"
+readme       = "README.md"
+
+[features]
+serde = ["dep:serde", "recyclebin-core/serde", "forensicnomicon/serde"]
+
+[dependencies]
+recyclebin-core = { workspace = true }
+forensicnomicon = { workspace = true }
+serde           = { workspace = true, optional = true }
+
+[lints]
+workspace = true

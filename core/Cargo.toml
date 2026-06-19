@@ -1,0 +1,26 @@
+[package]
+name         = "recyclebin-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description  = "Pure-Rust read-only Windows Recycle Bin $I index reader — parses pre-Win10 (v1) and Win10+ (v2) $I metadata and pairs $I/$R files to recover deleted-file path, size, and deletion time"
+license.workspace = true
+authors      = ["Albert Hui <albert@securityronin.com>"]
+keywords     = ["forensics", "recycle-bin", "windows", "dfir", "parser"]
+categories   = ["parser-implementations"]
+repository.workspace = true
+homepage     = "https://github.com/SecurityRonin/recyclebin-forensic"
+documentation = "https://docs.rs/recyclebin-core"
+readme       = "../README.md"
+exclude      = ["tests/data/", "fuzz/"]
+
+[features]
+serde = ["dep:serde", "chrono/serde"]
+
+[dependencies]
+chrono    = { workspace = true }
+thiserror = { workspace = true }
+serde     = { workspace = true, optional = true }
+
+[lints]
+workspace = true
