@@ -42,6 +42,9 @@ pub mod macos;
 #[cfg(feature = "android")]
 pub mod android;
 
+#[cfg(feature = "ios")]
+pub mod ios;
+
 #[cfg(feature = "windows")]
 pub use windows::{audit_pair, AnomalyKind};
 
@@ -53,6 +56,9 @@ pub use macos::{audit_put_back, DsStoreAnomaly};
 
 #[cfg(feature = "android")]
 pub use android::{audit_trashed_name, TrashedNameAnomaly};
+
+#[cfg(feature = "ios")]
+pub use ios::{audit_trashed_asset, IosAssetAnomaly};
 
 /// Analyzer name, recorded on every finding's [`forensicnomicon::report::Source`]
 /// for reproducibility, shared across the per-OS analyzers.

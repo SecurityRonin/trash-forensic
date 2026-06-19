@@ -14,12 +14,13 @@ documentation = "https://docs.rs/trash-forensic"
 readme       = "README.md"
 
 [features]
-default = ["windows", "linux", "macos", "android"]
+default = ["windows", "linux", "macos", "android", "ios"]
 # Per-OS analyzers; each pulls the matching `trash-core` reader feature.
 windows = ["trash-core/windows"]
 linux = ["trash-core/linux"]
 macos = ["trash-core/macos"]
 android = ["trash-core/android"]
+ios = ["trash-core/ios"]
 serde = ["dep:serde", "trash-core/serde", "forensicnomicon/serde"]
 
 [dependencies]
