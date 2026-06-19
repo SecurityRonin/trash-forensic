@@ -2,7 +2,7 @@
 //! `Photos.sqlite`.
 //!
 //! iOS has no filesystem-level recycle bin; "Recently Deleted" is app-level
-//! SQLite soft-delete. In the Photos library database
+//! `SQLite` soft-delete. In the Photos library database
 //! (`/private/var/mobile/Media/PhotoData/Photos.sqlite`) a trashed photo or video
 //! keeps its row in the `ZASSET` table (named `ZGENERICASSET` on iOS 8–13) with:
 //!
@@ -13,7 +13,7 @@
 //! The asset survives a ~30-day retention window before the row is purged.
 //! Recovery of *purged* rows (WAL, freelist, carving) is out of scope here — it is
 //! the job of the underlying [`sqlite_core`] engine, which this module reuses for
-//! all SQLite access (no `libsqlite3`).
+//! all `SQLite` access (no `libsqlite3`).
 //!
 //! Sources: The Forensic Scooter, "Photos.sqlite Query Documentation"
 //! (<https://theforensicscooter.com/2022/05/02/photos-sqlite-query-documentation-notable-artifacts/>);
@@ -21,6 +21,7 @@
 //! `trash-forensic` grades them.
 
 use chrono::{DateTime, TimeZone, Utc};
+use sqlite_core::{Database, Value};
 use thiserror::Error;
 
 /// Seconds between the Mac Absolute Time epoch (2001-01-01) and the Unix epoch.
@@ -29,7 +30,7 @@ const MAC_ABSOLUTE_EPOCH_OFFSET: i64 = 978_307_200;
 /// Errors returned while reading trashed assets from a `Photos.sqlite`.
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum IosError {
-    /// The underlying SQLite engine could not open or read the database. Carries
+    /// The underlying `SQLite` engine could not open or read the database. Carries
     /// the engine's message.
     #[error("Photos.sqlite read failed: {0}")]
     Sqlite(String),
@@ -63,13 +64,11 @@ pub struct TrashedAsset {
 ///
 /// # Errors
 ///
-/// Returns [`IosError`] when the bytes are not a readable SQLite database, carry
+/// Returns [`IosError`] when the bytes are not a readable `SQLite` database, carry
 /// no `ZASSET`/`ZGENERICASSET` table, or that table lacks `ZTRASHEDSTATE`.
 pub fn parse_trashed_assets(db_bytes: Vec<u8>) -> Result<Vec<TrashedAsset>, IosError> {
-    todo!(
-        "RED: parse_trashed_assets not yet implemented (len={})",
-        db_bytes.len()
-    )
+    let db = Database::open(db_bytes).map_err(|e| IosError::Sqlite(format!("{e:?}")))?;
+    extract_trashed(&db)
 }
 
 /// As [`parse_trashed_assets`], but layering a `Photos.sqlite-wal` over the main
@@ -82,11 +81,145 @@ pub fn parse_trashed_assets_with_wal(
     db_bytes: Vec<u8>,
     wal: &[u8],
 ) -> Result<Vec<TrashedAsset>, IosError> {
-    todo!(
-        "RED: parse_trashed_assets_with_wal not yet implemented ({}/{})",
-        db_bytes.len(),
-        wal.len()
-    )
+    let db =
+        Database::open_with_wal(db_bytes, wal).map_err(|e| IosError::Sqlite(format!("{e:?}")))?;
+    extract_trashed(&db)
+}
+
+/// Find the `ZASSET`/`ZGENERICASSET` table, map the trashed columns by name, and
+/// return the live rows whose `ZTRASHEDSTATE` is 1.
+fn extract_trashed(db: &Database) -> Result<Vec<TrashedAsset>, IosError> {
+    // `sqlite_master` rows are `[type, name, tbl_name, rootpage, sql]`.
+    let schema = db.live_schema_rows();
+    let (root_page, sql) = find_asset_table(&schema).ok_or(IosError::NoAssetTable)?;
+    let columns = parse_column_names(&sql);
+    let idx_state = column_index(&columns, "ZTRASHEDSTATE").ok_or(IosError::NoTrashedColumn)?;
+    let idx_date = column_index(&columns, "ZTRASHEDDATE");
+    let idx_filename = column_index(&columns, "ZFILENAME");
+    let idx_directory = column_index(&columns, "ZDIRECTORY");
+
+    let rows = db
+        .read_table(root_page, columns.len())
+        .map_err(|e| IosError::Sqlite(format!("{e:?}")))?;
+
+    let mut assets: Vec<TrashedAsset> = rows
+        .into_iter()
+        .filter(|row| matches!(row.values.get(idx_state), Some(Value::Integer(1))))
+        .map(|row| TrashedAsset {
+            rowid: row.rowid,
+            filename: idx_filename.and_then(|i| text_at(&row.values, i)),
+            directory: idx_directory.and_then(|i| text_at(&row.values, i)),
+            trashed_at: idx_date.and_then(|i| date_at(&row.values, i)),
+        })
+        .collect();
+    assets.sort_by_key(|a| a.rowid);
+    Ok(assets)
+}
+
+/// Locate the Photos asset table in the schema rows, returning its root page and
+/// `CREATE` SQL.
+fn find_asset_table(schema: &[Vec<Value>]) -> Option<(u32, String)> {
+    schema.iter().find_map(|row| {
+        if row.first().and_then(value_text) != Some("table") {
+            return None;
+        }
+        let name = row.get(1).and_then(value_text)?;
+        if name != "ZASSET" && name != "ZGENERICASSET" {
+            return None;
+        }
+        let root = row.get(3).and_then(value_int)?;
+        let sql = row.get(4).and_then(value_text)?;
+        Some((u32::try_from(root).ok()?, sql.to_string()))
+    })
+}
+
+/// Extract the ordered column names from a `CREATE TABLE` statement, skipping
+/// table-level constraints (`PRIMARY KEY(...)`, `FOREIGN KEY`, …).
+fn parse_column_names(sql: &str) -> Vec<String> {
+    let Some(open) = sql.find('(') else {
+        return Vec::new();
+    };
+    // The column list lies between the first `(` and the final `)`.
+    let inner = &sql[open + 1..];
+    let body = inner.rfind(')').map_or(inner, |close| &inner[..close]);
+
+    let mut columns = Vec::new();
+    for part in split_top_level(body) {
+        let Some(first) = part.split_whitespace().next() else {
+            continue;
+        };
+        let name = first.trim_matches(|c| matches!(c, '"' | '`' | '[' | ']' | '\''));
+        if name.is_empty() {
+            continue;
+        }
+        let is_constraint = matches!(
+            name.to_ascii_uppercase().as_str(),
+            "PRIMARY" | "FOREIGN" | "UNIQUE" | "CHECK" | "CONSTRAINT" | "KEY"
+        );
+        if !is_constraint {
+            columns.push(name.to_string());
+        }
+    }
+    columns
+}
+
+/// Split a string on commas that sit at parenthesis depth zero.
+fn split_top_level(s: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth: i32 = 0;
+    let mut start = 0usize;
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&s[start..]);
+    parts
+}
+
+/// Case-insensitive column-name lookup.
+fn column_index(columns: &[String], name: &str) -> Option<usize> {
+    columns.iter().position(|c| c.eq_ignore_ascii_case(name))
+}
+
+/// The text value at `index`, or `None` if absent or not text.
+fn text_at(values: &[Value], index: usize) -> Option<String> {
+    match values.get(index) {
+        Some(Value::Text(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+/// The Mac-Absolute-Time value at `index` (`REAL` or `INTEGER`) as UTC.
+fn date_at(values: &[Value], index: usize) -> Option<DateTime<Utc>> {
+    let seconds = match values.get(index)? {
+        Value::Real(r) => *r,
+        Value::Integer(i) => *i as f64,
+        _ => return None,
+    };
+    mac_absolute_to_utc(seconds)
+}
+
+/// Borrow a [`Value`] as text.
+fn value_text(value: &Value) -> Option<&str> {
+    match value {
+        Value::Text(s) => Some(s),
+        _ => None,
+    }
+}
+
+/// Borrow a [`Value`] as an integer.
+fn value_int(value: &Value) -> Option<i64> {
+    match value {
+        Value::Integer(i) => Some(*i),
+        _ => None,
+    }
 }
 
 /// Convert a Mac Absolute Time value (Cocoa epoch seconds, possibly fractional)
@@ -138,7 +271,7 @@ mod tests {
         assert_eq!(assets[1].trashed_at, Some(at(701_234_567 + 978_307_200)));
     }
 
-    /// Non-SQLite bytes are a typed error, not a panic.
+    /// Non-`SQLite` bytes are a typed error, not a panic.
     #[test]
     fn invalid_database_is_error() {
         assert!(parse_trashed_assets(vec![0u8; 100]).is_err());
