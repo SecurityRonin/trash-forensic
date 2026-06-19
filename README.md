@@ -1,87 +1,76 @@
 # recyclebin-forensic
 
-[![Crates.io core](https://img.shields.io/crates/v/recyclebin-core?label=recyclebin-core)](https://crates.io/crates/recyclebin-core)
-[![Crates.io forensic](https://img.shields.io/crates/v/recyclebin-forensic?label=recyclebin-forensic)](https://crates.io/crates/recyclebin-forensic)
-[![Docs.rs](https://img.shields.io/docsrs/recyclebin-core?label=docs.rs)](https://docs.rs/recyclebin-core)
-[![Rust 1.96+](https://img.shields.io/badge/rust-1.96%2B-orange.svg)](https://www.rust-lang.org)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Sponsor](https://img.shields.io/badge/sponsor-h4x0r-ea4aaa)](https://github.com/sponsors/h4x0r)
+[![recyclebin-core](https://img.shields.io/crates/v/recyclebin-core.svg?label=recyclebin-core)](https://crates.io/crates/recyclebin-core)
+[![recyclebin-forensic](https://img.shields.io/crates/v/recyclebin-forensic.svg?label=recyclebin-forensic)](https://crates.io/crates/recyclebin-forensic)
+[![Docs.rs](https://img.shields.io/docsrs/recyclebin-forensic)](https://docs.rs/recyclebin-forensic)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/sponsor-h4x0r-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/h4x0r)
 
 [![CI](https://github.com/SecurityRonin/recyclebin-forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/recyclebin-forensic/actions/workflows/ci.yml)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance)
 [![security advisories](https://img.shields.io/badge/security-cargo--deny-success.svg)](deny.toml)
 
-**Recover who deleted what, when — straight from the Windows Recycle Bin `$I`
-index, and have the suspicious records flagged for you.**
+**Who deleted what, when — recovered straight from a Windows `$Recycle.Bin`, with the suspicious entries already graded for you.** Point it at a recycle-bin directory carved from an image and get back, per deleted file: the original path, the original size, the deletion time, and a severity-graded finding for anything that looks tampered with.
 
-When a file is sent to the Recycle Bin on Windows Vista and later, the shell
-writes a `$I…` index file (the deleted file's original path, size, and deletion
-time) and a `$R…` file (its content). `recyclebin-core` reads the `$I` metadata
-and pairs `$I`/`$R`; `recyclebin-forensic` grades the anomalies.
+## The results, in 12 lines
 
-```rust
-use recyclebin_core::parse_index;
-
-// raw bytes of a $I index file
-let idx = parse_index(bytes)?;
-println!("{} ({} bytes) deleted {:?}",
-    idx.original_path, idx.original_size, idx.deleted_at);
-// C:\Users\victim\Documents\secret plan.docx (1234 bytes) deleted Some(2024-01-15T10:30:00Z)
-# Ok::<(), recyclebin_core::Error>(())
+```toml
+[dependencies]
+recyclebin-forensic = "0.1"   # pulls in recyclebin-core
 ```
-
-## The analyzer is the differentiator
-
-`recyclebin-forensic::audit_pair` turns a parsed record + its `$I`/`$R` pairing
-into graded [`forensicnomicon`](https://crates.io/crates/forensicnomicon)
-findings, so Recycle Bin evidence aggregates alongside every other SecurityRonin
-analyzer:
 
 ```rust
 use recyclebin_core::{parse_index, scan_pairs};
 use recyclebin_forensic::audit_pair;
 
-for pair in scan_pairs(recycle_bin_dir)? {
+for pair in scan_pairs(recycle_bin_dir)? {           // $Recycle.Bin\<SID>\
     let bytes = std::fs::read(&pair.index_path)?;
     if let Ok(index) = parse_index(&bytes) {
-        for f in audit_pair(&index, &pair) {
-            println!("[{:?}] {} — {}", f.severity, f.code, f.note);
+        // what was deleted, and when
+        println!("{} ({} bytes) deleted {:?}",
+            index.original_path, index.original_size, index.deleted_at);
+        // …and anything suspicious about it, already graded
+        for finding in audit_pair(&index, &pair) {
+            println!("  [{:?}] {} — {}", finding.severity, finding.code, finding.note);
         }
     }
 }
 # Ok::<(), std::io::Error>(())
 ```
 
-| Code | Category | Severity | Meaning |
-|---|---|---|---|
-| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | `$I` metadata survives but the `$R` content file is gone |
-| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | the stored original path escapes its directory (`..\`) |
-| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | the deletion `FILETIME` is zero (unset / cleared) |
+```text
+C:\Users\victim\Documents\secret plan.docx (1234 bytes) deleted Some(2024-01-15T10:30:00Z)
+  [High] RECYCLEBIN-PATH-TRAVERSAL — stored original path ..\..\Windows\…  contains parent-directory ('..') components — consistent with a crafted name rather than a normal deletion
+```
 
-Findings are observations, never legal conclusions — the analyst concludes.
+That is the whole job: every `$I` index in the directory decoded to a deleted-file record, each one paired with its `$R` content and graded. A clean record prints its line and no finding.
+
+## What gets flagged
+
+Each finding is an **observation** ("consistent with …"); the examiner draws the conclusions. The codes are a stable, published contract.
+
+| Code | Category | Severity | What it observes |
+|---|---|---|---|
+| `RECYCLEBIN-CONTENT-PURGED` | Residue | Medium | The `$I` metadata survives but the `$R` content file is gone — the deleted file's record outlived its data |
+| `RECYCLEBIN-PATH-TRAVERSAL` | Concealment | High | The stored original path escapes its directory via a `..` component — consistent with a crafted name, not a normal shell deletion |
+| `RECYCLEBIN-DELETION-TIME-MISSING` | Integrity | Low | The deletion `FILETIME` is zero — recorded but never set, or cleared |
+
+Findings carry the offending `original_path` as evidence and are stamped with the analyzer name, version, and the `$I` filename, so they aggregate uniformly with every other [`forensicnomicon`](https://crates.io/crates/forensicnomicon) analyzer in the fleet.
+
+## No-Rust path
+
+The two crates are the building blocks; for an end-to-end timeline that correlates Recycle Bin evidence with the rest of an image, they feed [`issen`](https://github.com/SecurityRonin/issen) — the SecurityRonin examiner front end — so you get the findings without writing any Rust.
 
 ## The two-crate split
 
-- **`recyclebin-core`** — the reader. Parses the `$I` index (version 1 pre-Win10
-  fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs `$I`/`$R` by a
-  directory scan. No findings.
-- **`recyclebin-forensic`** — the analyzer. Emits canonical findings via
-  `forensicnomicon::report`, depending on `recyclebin-core`.
+- **[`recyclebin-core`](https://crates.io/crates/recyclebin-core)** — the reader. Parses the `$I` index (version 1 pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs `$I`/`$R` by a directory scan. No findings.
+- **[`recyclebin-forensic`](https://crates.io/crates/recyclebin-forensic)** — the analyzer. Grades a parsed record + its pairing into canonical `forensicnomicon` findings. The split mirrors `ntfs-core`/`ntfs-forensic`.
 
 ## Trust, but verify
 
-`$I` bytes are treated as attacker-controlled: the reader is **panic-free**, with
-bounds-checked integer reads, a 32 768-char cap on the version-2 filename length
-before allocation, and a typed `Error` for every truncation or hostile length —
-never a panic, never an out-of-bounds read. Both the parser and the full
-parse→audit pipeline are **fuzzed** (`cargo fuzz`, *must not panic*).
+`$I` bytes are treated as attacker-controlled: the reader is **panic-free**, with bounds-checked integer reads, a 32 768-char cap on the version-2 filename length before allocation, and a typed `Error` — carrying the offending value — for every truncation or hostile length. Never a panic, never an out-of-bounds read. Both the parser and the full parse → audit pipeline are **fuzzed** (`cargo fuzz`, *must not panic*).
 
-Correctness is validated against an **independent oracle** — the C tool
-[rifiuti2](https://github.com/abelcheung/rifiuti2) — not only self-consistent
-round-trips: fixtures are hand-assembled strictly from the libyal
-[*Windows Recycle.Bin file formats*](https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc)
-spec and decoded with both this reader and `rifiuti-vista`, which must agree on
-path, size, and deletion time. See [`docs/validation.md`](docs/validation.md).
+Correctness is validated against an **independent oracle** — the C tool [rifiuti2](https://github.com/abelcheung/rifiuti2) — not only self-consistent round-trips: fixtures are hand-assembled strictly from the libyal [*Windows Recycle.Bin file formats*](https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc) spec and decoded with both this reader and `rifiuti-vista`, which must agree on path, size, and deletion time. See [`docs/validation.md`](docs/validation.md).
 
 ---
 

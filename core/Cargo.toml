@@ -11,7 +11,7 @@ categories   = ["parser-implementations"]
 repository.workspace = true
 homepage     = "https://github.com/SecurityRonin/recyclebin-forensic"
 documentation = "https://docs.rs/recyclebin-core"
-readme       = "../README.md"
+readme       = "README.md"
 exclude      = ["tests/data/", "fuzz/"]
 
 [features]
