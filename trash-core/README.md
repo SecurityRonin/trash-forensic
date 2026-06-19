@@ -1,28 +1,28 @@
-# recyclebin-core
+# trash-core
 
-[![recyclebin-core](https://img.shields.io/crates/v/recyclebin-core.svg?label=recyclebin-core)](https://crates.io/crates/recyclebin-core)
-[![recyclebin-forensic](https://img.shields.io/crates/v/recyclebin-forensic.svg?label=recyclebin-forensic)](https://crates.io/crates/recyclebin-forensic)
-[![Docs.rs](https://img.shields.io/docsrs/recyclebin-core)](https://docs.rs/recyclebin-core)
+[![trash-core](https://img.shields.io/crates/v/trash-core.svg?label=trash-core)](https://crates.io/crates/trash-core)
+[![trash-forensic](https://img.shields.io/crates/v/trash-forensic.svg?label=trash-forensic)](https://crates.io/crates/trash-forensic)
+[![Docs.rs](https://img.shields.io/docsrs/trash-core)](https://docs.rs/trash-core)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![CI](https://github.com/SecurityRonin/recyclebin-forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/recyclebin-forensic/actions)
+[![CI](https://github.com/SecurityRonin/trash-forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/trash-forensic/actions)
 [![Sponsor](https://img.shields.io/badge/sponsor-h4x0r-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/h4x0r)
 
 **A from-scratch, read-only Windows Recycle Bin `$I` index reader — recovers a deleted file's original path, size, and deletion time, and pairs `$I`/`$R` files by a directory scan. Pure Rust, no `unsafe`, no Windows host required: reads a `$Recycle.Bin` lifted from any image.**
 
 ```toml
 [dependencies]
-recyclebin-core = "0.1"
+trash-core = "0.1"
 ```
 
 ```rust
-use recyclebin_core::parse_index;
+use trash_core::parse_index;
 
 // raw bytes of a $I index file (e.g. $IAB12CD.docx)
 let idx = parse_index(bytes)?;
 println!("{} ({} bytes) deleted {:?}",
     idx.original_path, idx.original_size, idx.deleted_at);
 // C:\Users\victim\Documents\secret plan.docx (1234 bytes) deleted Some(2024-01-15T10:30:00Z)
-# Ok::<(), recyclebin_core::Error>(())
+# Ok::<(), trash_core::Error>(())
 ```
 
 ## What it parses
@@ -38,8 +38,8 @@ directory and matches each `$I` index to its `$R` content file by the trailing
 identifier (`$IAB12CD.docx` ⇄ `$RAB12CD.docx`); a `$I` with no `$R` yields a pair
 whose `content_path` is `None`.
 
-The bare crate name `recyclebin` is not used; the reader publishes as
-**`recyclebin-core`** and imports as **`recyclebin_core`**.
+The bare crate name `trash` is taken on crates.io, so the reader publishes as
+**`trash-core`** and imports as **`trash_core`**.
 
 ## Trust, but verify
 
@@ -51,15 +51,15 @@ allocation); a truncated or hostile file returns a typed `Error` that carries th
 offending value, never a panic or an out-of-bounds read. Fuzzed with `cargo-fuzz`
 (*must not panic*), and decoded paths/sizes/times are cross-checked against the C
 tool [rifiuti2](https://github.com/abelcheung/rifiuti2). See
-[`docs/validation.md`](https://github.com/SecurityRonin/recyclebin-forensic/blob/main/docs/validation.md).
+[`docs/validation.md`](https://github.com/SecurityRonin/trash-forensic/blob/main/docs/validation.md).
 
 ## Forensic analysis
 
 Severity-graded anomaly auditing (purged content, path-traversal in the stored
 name, missing deletion time) lives in the sibling
-**[`recyclebin-forensic`](https://crates.io/crates/recyclebin-forensic)** crate,
+**[`trash-forensic`](https://crates.io/crates/trash-forensic)** crate,
 built on this one — the reader/analyzer split mirrors `ntfs-core`/`ntfs-forensic`.
 
 ---
 
-[Privacy Policy](https://securityronin.github.io/recyclebin-forensic/privacy/) · [Terms of Service](https://securityronin.github.io/recyclebin-forensic/terms/) · © 2026 Security Ronin Ltd
+[Privacy Policy](https://securityronin.github.io/trash-forensic/privacy/) · [Terms of Service](https://securityronin.github.io/trash-forensic/terms/) · © 2026 Security Ronin Ltd

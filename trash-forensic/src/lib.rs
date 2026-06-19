@@ -1,6 +1,6 @@
 //! Forensic anomaly analysis for Windows Recycle Bin `$I`/`$R` artifacts.
 //!
-//! `recyclebin-core` is the lean reader: it parses a `$I` index file into a
+//! `trash-core` is the lean reader: it parses a `$I` index file into a
 //! [`RecycleBinIndex`] and pairs `$I`/`$R` files. This crate is the evidence-grade
 //! layer on top — it inspects a parsed record + its pairing and reports anomalies
 //! as canonical [`forensicnomicon::report::Finding`]s, so Recycle Bin findings
@@ -17,8 +17,8 @@
 //! Findings are observations, never legal conclusions: the analyst concludes.
 //!
 //! ```no_run
-//! use recyclebin_core::{parse_index, scan_pairs};
-//! use recyclebin_forensic::audit_pair;
+//! use trash_core::{parse_index, scan_pairs};
+//! use trash_forensic::audit_pair;
 //! # fn demo(dir: &std::path::Path) -> std::io::Result<()> {
 //! for pair in scan_pairs(dir)? {
 //!     let bytes = std::fs::read(&pair.index_path)?;
@@ -35,10 +35,10 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 use forensicnomicon::report::{Category, Evidence, Finding, Location, Severity, Source};
-use recyclebin_core::{RecycleBinIndex, RecycleBinPair};
+use trash_core::{RecycleBinIndex, RecycleBinPair};
 
 /// Analyzer name, recorded on every finding's [`Source`] for reproducibility.
-pub const ANALYZER: &str = "recyclebin-forensic";
+pub const ANALYZER: &str = "trash-forensic";
 
 /// A Recycle Bin anomaly, with the offending evidence attached.
 ///

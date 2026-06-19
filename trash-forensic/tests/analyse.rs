@@ -5,8 +5,8 @@
 use std::path::PathBuf;
 
 use forensicnomicon::report::{Category, Severity};
-use recyclebin_core::{parse_index, IndexVersion, RecycleBinIndex, RecycleBinPair};
-use recyclebin_forensic::audit_pair;
+use trash_core::{parse_index, IndexVersion, RecycleBinIndex, RecycleBinPair};
+use trash_forensic::audit_pair;
 
 const V2_DOCX: &[u8] = include_bytes!("../../tests/data/$IAB12CD.docx");
 const V2_TRAVERSAL: &[u8] = include_bytes!("../../tests/data/$ITRAVER.dll");
@@ -109,7 +109,7 @@ fn well_formed_record_with_time_and_content_is_clean() {
 }
 
 #[test]
-fn findings_carry_recyclebin_source_and_version() {
+fn findings_carry_trash_forensic_source_and_version() {
     let pair = RecycleBinPair {
         index_path: PathBuf::from("$ITRAVER.dll"),
         content_path: None,
@@ -117,7 +117,7 @@ fn findings_carry_recyclebin_source_and_version() {
     let findings = audit_pair(&idx(V2_TRAVERSAL), &pair);
     assert!(!findings.is_empty());
     for f in &findings {
-        assert_eq!(f.source.analyzer, "recyclebin-forensic");
+        assert_eq!(f.source.analyzer, "trash-forensic");
         assert!(f.source.version.is_some());
     }
     // sanity: the traversal fixture really is v2

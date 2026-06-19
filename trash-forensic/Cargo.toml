@@ -1,5 +1,5 @@
 [package]
-name         = "recyclebin-forensic"
+name         = "trash-forensic"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,15 +9,15 @@ authors      = ["Albert Hui <albert@securityronin.com>"]
 keywords     = ["forensics", "recycle-bin", "windows", "dfir", "anti-forensics"]
 categories   = ["parser-implementations"]
 repository.workspace = true
-homepage     = "https://github.com/SecurityRonin/recyclebin-forensic"
-documentation = "https://docs.rs/recyclebin-forensic"
+homepage     = "https://github.com/SecurityRonin/trash-forensic"
+documentation = "https://docs.rs/trash-forensic"
 readme       = "README.md"
 
 [features]
-serde = ["dep:serde", "recyclebin-core/serde", "forensicnomicon/serde"]
+serde = ["dep:serde", "trash-core/serde", "forensicnomicon/serde"]
 
 [dependencies]
-recyclebin-core = { workspace = true }
+trash-core = { workspace = true }
 forensicnomicon = { workspace = true }
 serde           = { workspace = true, optional = true }
 

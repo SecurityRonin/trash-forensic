@@ -5,7 +5,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use chrono::{TimeZone, Utc};
-use recyclebin_core::{parse_index, scan_pairs, Error, IndexVersion};
+use trash_core::{parse_index, scan_pairs, Error, IndexVersion};
 
 // Fixtures live in the single repo-root tests/data/; from core/tests/ the repo
 // root is two levels up.

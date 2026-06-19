@@ -1,6 +1,6 @@
 # Validation
 
-`recyclebin-core` is validated against an **independent oracle** — the C tool
+`trash-core` is validated against an **independent oracle** — the C tool
 [rifiuti2](https://github.com/abelcheung/rifiuti2) (`rifiuti-vista`, v0.8.2) — so
 the parser is checked by a tool we did not write, not only by self-consistent
 round-trips. This is the build-time front door to the Doer-Checker discipline.
@@ -30,7 +30,7 @@ with an end-of-string character.
 
 The fixtures under `tests/data/` were hand-assembled **strictly from the spec
 above** (raw `struct.pack`, not round-tripped through any writer of ours), then
-decoded with **both** `recyclebin-core::parse_index` **and** `rifiuti-vista`.
+decoded with **both** `trash-core::parse_index` **and** `rifiuti-vista`.
 The two must agree on version, original path, original size, and deletion time.
 
 ```

@@ -11,7 +11,7 @@
 //! `$R` prefix (`$IAB12CD.docx` ⇄ `$RAB12CD.docx`).
 //!
 //! This crate parses the `$I` metadata and pairs `$I`/`$R` files by a directory
-//! scan. It produces no findings — the [`recyclebin-forensic`] analyzer layers
+//! scan. It produces no findings — the [`trash-forensic`] analyzer layers
 //! anomaly detection on top.
 //!
 //! # Format
@@ -34,7 +34,7 @@
 //! as attacker-controlled, so a truncated or hostile file yields an [`Error`],
 //! never a panic.
 //!
-//! [`recyclebin-forensic`]: https://docs.rs/recyclebin-forensic
+//! [`trash-forensic`]: https://docs.rs/trash-forensic
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 

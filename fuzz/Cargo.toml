@@ -1,5 +1,5 @@
 [package]
-name    = "recyclebin-fuzz"
+name    = "trash-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -23,5 +23,5 @@ doc  = false
 
 [dependencies]
 libfuzzer-sys   = "0.4"
-recyclebin-core = { path = "../core" }
-recyclebin-forensic = { path = "../forensic" }
+trash-core = { path = "../trash-core" }
+trash-forensic = { path = "../trash-forensic" }

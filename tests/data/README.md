@@ -1,4 +1,4 @@
-# Test fixtures — `recyclebin-forensic`
+# Test fixtures — `trash-forensic`
 
 All fixtures are **SYNTHETIC**, hand-assembled strictly from the libyal *Windows
 Recycle.Bin file formats* specification (raw `struct.pack`, not round-tripped

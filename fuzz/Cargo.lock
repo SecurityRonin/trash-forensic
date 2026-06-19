@@ -125,31 +125,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
-name = "recyclebin-core"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "thiserror",
-]
-
-[[package]]
-name = "recyclebin-forensic"
-version = "0.1.0"
-dependencies = [
- "forensicnomicon",
- "recyclebin-core",
-]
-
-[[package]]
-name = "recyclebin-fuzz"
-version = "0.0.0"
-dependencies = [
- "libfuzzer-sys",
- "recyclebin-core",
- "recyclebin-forensic",
-]
-
-[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -184,6 +159,31 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "trash-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "thiserror",
+]
+
+[[package]]
+name = "trash-forensic"
+version = "0.1.0"
+dependencies = [
+ "forensicnomicon",
+ "trash-core",
+]
+
+[[package]]
+name = "trash-fuzz"
+version = "0.0.0"
+dependencies = [
+ "libfuzzer-sys",
+ "trash-core",
+ "trash-forensic",
 ]
 
 [[package]]

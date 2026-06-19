@@ -4,11 +4,11 @@
 
 ## Licence
 
-recyclebin-forensic is released under the [Apache License 2.0](https://github.com/SecurityRonin/recyclebin-forensic/blob/main/LICENSE). You may use, modify, and distribute it subject to the terms of that licence.
+trash-forensic is released under the [Apache License 2.0](https://github.com/SecurityRonin/trash-forensic/blob/main/LICENSE). You may use, modify, and distribute it subject to the terms of that licence.
 
 ## Acceptable Use
 
-You agree to use recyclebin-forensic only for lawful purposes, including but not limited to:
+You agree to use trash-forensic only for lawful purposes, including but not limited to:
 
 - Digital forensics investigations on systems you own or are authorised to examine
 - Incident response activities within your organisation
@@ -17,7 +17,7 @@ You agree to use recyclebin-forensic only for lawful purposes, including but not
 
 ## No Warranty
 
-recyclebin-forensic is provided "as is" without warranty of any kind. Security Ronin Ltd is not liable for any damages arising from use of this software.
+trash-forensic is provided "as is" without warranty of any kind. Security Ronin Ltd is not liable for any damages arising from use of this software.
 
 ## Contact
 

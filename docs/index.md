@@ -1,4 +1,4 @@
-# recyclebin-forensic
+# trash-forensic
 
 Windows Recycle Bin `$I` index reader + forensic analyzer.
 
@@ -6,18 +6,18 @@ When a file is sent to the Recycle Bin on Windows Vista and later, the shell
 writes a `$I…` index file (the deleted file's original path, size, and deletion
 time) and a `$R…` content file. This repo is two crates:
 
-- **`recyclebin-core`** — the reader. Parses the `$I` index format (version 1
+- **`trash-core`** — the reader. Parses the `$I` index format (version 1
   pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs
   `$I`/`$R` files by a directory scan. No findings.
-- **`recyclebin-forensic`** — the analyzer. Emits canonical
+- **`trash-forensic`** — the analyzer. Emits canonical
   [`forensicnomicon`](https://crates.io/crates/forensicnomicon) findings for
   purged content, path-traversal stored names, and missing deletion times.
 
 ## Quick start
 
 ```rust
-use recyclebin_core::{parse_index, scan_pairs};
-use recyclebin_forensic::audit_pair;
+use trash_core::{parse_index, scan_pairs};
+use trash_forensic::audit_pair;
 
 for pair in scan_pairs(recycle_bin_dir)? {
     let bytes = std::fs::read(&pair.index_path)?;

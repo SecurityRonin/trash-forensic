@@ -1,11 +1,11 @@
-site_name: recyclebin-forensic
-site_url: https://securityronin.github.io/recyclebin-forensic/
+site_name: trash-forensic
+site_url: https://securityronin.github.io/trash-forensic/
 site_description: >-
   Windows Recycle Bin $I index reader + forensic analyzer — recover deleted-file
   path, size, and deletion time; flag purged content, path traversal, and missing
   timestamps.
-repo_url: https://github.com/SecurityRonin/recyclebin-forensic
-repo_name: SecurityRonin/recyclebin-forensic
+repo_url: https://github.com/SecurityRonin/trash-forensic
+repo_name: SecurityRonin/trash-forensic
 
 theme:
   name: material

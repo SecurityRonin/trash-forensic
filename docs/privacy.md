@@ -4,19 +4,19 @@
 
 ## Summary
 
-recyclebin-forensic is a local Rust library. It does not collect, transmit, or store any personal data on remote servers.
+trash-forensic is a local Rust library. It does not collect, transmit, or store any personal data on remote servers.
 
 ## Data Access
 
-recyclebin-forensic reads only the file bytes you pass to it (Recycle Bin `$I`/`$R` artifacts). All processing happens in memory on your local machine. Nothing is uploaded anywhere.
+trash-forensic reads only the file bytes you pass to it (Recycle Bin `$I`/`$R` artifacts). All processing happens in memory on your local machine. Nothing is uploaded anywhere.
 
 ## Telemetry
 
-recyclebin-forensic has **no telemetry**. It makes no network requests of any kind.
+trash-forensic has **no telemetry**. It makes no network requests of any kind.
 
 ## Open Source
 
-recyclebin-forensic is open source (Apache-2.0). You can audit every line of code at [github.com/SecurityRonin/recyclebin-forensic](https://github.com/SecurityRonin/recyclebin-forensic).
+trash-forensic is open source (Apache-2.0). You can audit every line of code at [github.com/SecurityRonin/trash-forensic](https://github.com/SecurityRonin/trash-forensic).
 
 ## Contact
 

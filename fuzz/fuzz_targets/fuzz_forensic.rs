@@ -4,10 +4,10 @@
 use std::path::PathBuf;
 
 use libfuzzer_sys::fuzz_target;
-use recyclebin_core::RecycleBinPair;
+use trash_core::RecycleBinPair;
 
 fuzz_target!(|data: &[u8]| {
-    if let Ok(index) = recyclebin_core::parse_index(data) {
+    if let Ok(index) = trash_core::parse_index(data) {
         // Drive the analyzer over both pairing states (paired / purged) so the
         // path-traversal and missing-time arms are reached on crafted input.
         let purged = RecycleBinPair {
@@ -18,7 +18,7 @@ fuzz_target!(|data: &[u8]| {
             index_path: PathBuf::from("$IFUZZ00.bin"),
             content_path: Some(PathBuf::from("$RFUZZ00.bin")),
         };
-        let _ = recyclebin_forensic::audit_pair(&index, &purged);
-        let _ = recyclebin_forensic::audit_pair(&index, &paired);
+        let _ = trash_forensic::audit_pair(&index, &purged);
+        let _ = trash_forensic::audit_pair(&index, &paired);
     }
 });

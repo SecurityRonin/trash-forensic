@@ -1,12 +1,12 @@
-# recyclebin-forensic
+# trash-forensic
 
-[![recyclebin-core](https://img.shields.io/crates/v/recyclebin-core.svg?label=recyclebin-core)](https://crates.io/crates/recyclebin-core)
-[![recyclebin-forensic](https://img.shields.io/crates/v/recyclebin-forensic.svg?label=recyclebin-forensic)](https://crates.io/crates/recyclebin-forensic)
-[![Docs.rs](https://img.shields.io/docsrs/recyclebin-forensic)](https://docs.rs/recyclebin-forensic)
+[![trash-core](https://img.shields.io/crates/v/trash-core.svg?label=trash-core)](https://crates.io/crates/trash-core)
+[![trash-forensic](https://img.shields.io/crates/v/trash-forensic.svg?label=trash-forensic)](https://crates.io/crates/trash-forensic)
+[![Docs.rs](https://img.shields.io/docsrs/trash-forensic)](https://docs.rs/trash-forensic)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/sponsor-h4x0r-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/h4x0r)
 
-[![CI](https://github.com/SecurityRonin/recyclebin-forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/recyclebin-forensic/actions/workflows/ci.yml)
+[![CI](https://github.com/SecurityRonin/trash-forensic/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/trash-forensic/actions/workflows/ci.yml)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance)
 [![security advisories](https://img.shields.io/badge/security-cargo--deny-success.svg)](deny.toml)
 
@@ -16,12 +16,12 @@
 
 ```toml
 [dependencies]
-recyclebin-forensic = "0.1"   # pulls in recyclebin-core
+trash-forensic = "0.1"   # pulls in trash-core
 ```
 
 ```rust
-use recyclebin_core::{parse_index, scan_pairs};
-use recyclebin_forensic::audit_pair;
+use trash_core::{parse_index, scan_pairs};
+use trash_forensic::audit_pair;
 
 for pair in scan_pairs(recycle_bin_dir)? {           // $Recycle.Bin\<SID>\
     let bytes = std::fs::read(&pair.index_path)?;
@@ -63,8 +63,8 @@ The two crates are the building blocks; for an end-to-end timeline that correlat
 
 ## The two-crate split
 
-- **[`recyclebin-core`](https://crates.io/crates/recyclebin-core)** — the reader. Parses the `$I` index (version 1 pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs `$I`/`$R` by a directory scan. No findings.
-- **[`recyclebin-forensic`](https://crates.io/crates/recyclebin-forensic)** — the analyzer. Grades a parsed record + its pairing into canonical `forensicnomicon` findings. The split mirrors `ntfs-core`/`ntfs-forensic`.
+- **[`trash-core`](https://crates.io/crates/trash-core)** — the reader. Parses the `$I` index (version 1 pre-Win10 fixed 520-byte name; version 2 Win10+ length-prefixed) and pairs `$I`/`$R` by a directory scan. No findings.
+- **[`trash-forensic`](https://crates.io/crates/trash-forensic)** — the analyzer. Grades a parsed record + its pairing into canonical `forensicnomicon` findings. The split mirrors `ntfs-core`/`ntfs-forensic`.
 
 ## Trust, but verify
 
@@ -74,4 +74,4 @@ Correctness is validated against an **independent oracle** — the C tool [rifiu
 
 ---
 
-[Privacy Policy](https://securityronin.github.io/recyclebin-forensic/privacy/) · [Terms of Service](https://securityronin.github.io/recyclebin-forensic/terms/) · © 2026 Security Ronin Ltd
+[Privacy Policy](https://securityronin.github.io/trash-forensic/privacy/) · [Terms of Service](https://securityronin.github.io/trash-forensic/terms/) · © 2026 Security Ronin Ltd
