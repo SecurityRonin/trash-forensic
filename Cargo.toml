@@ -16,7 +16,7 @@ repository   = "https://github.com/SecurityRonin/trash-forensic"
 # version lives here too, so a bump touches one line.
 [workspace.dependencies]
 trash-core = { path = "trash-core", version = "0.2.2" }
-forensicnomicon = "0.11"
+forensicnomicon = "1"
 chrono          = { version = "0.4", default-features = false, features = ["std"] }
 thiserror       = "2"
 serde           = { version = "1", features = ["derive"] }

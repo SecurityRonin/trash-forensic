@@ -23,7 +23,34 @@ name = "forensicnomicon"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ac93239ea6e37ff6f00c54bd204a0a4d9c6ca5f7b0aaeb852f02a899e183830"
+
+[[package]]
+name = "forensicnomicon"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ed4548e40fc4f7f22f769ba68afbb426c379c168ea4ab019421f10d91fa3b4e"
 dependencies = [
+ "forensicnomicon-core",
+ "forensicnomicon-data",
+ "serde",
+]
+
+[[package]]
+name = "forensicnomicon-core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5d5b96ffd37d1e758a1657839de8b4d5e7bfc024a5500509d07ff7acd7b9461"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "forensicnomicon-data"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "664814f07d95790e9c38a9c2c3a0a5539ba4e1ef8e4de72cf32424fc397364ba"
+dependencies = [
+ "forensicnomicon-core",
  "serde",
 ]
 
@@ -96,7 +123,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4707039a88e052418973ca17f08a02cc7bcced45491057c6e91bae8c2c0a39ce"
 dependencies = [
- "forensicnomicon",
+ "forensicnomicon 0.11.0",
 ]
 
 [[package]]
@@ -146,7 +173,7 @@ name = "trash-forensic"
 version = "0.2.2"
 dependencies = [
  "chrono",
- "forensicnomicon",
+ "forensicnomicon 1.0.0",
  "serde",
  "trash-core",
 ]
