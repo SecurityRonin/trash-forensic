@@ -20,12 +20,6 @@ dependencies = [
 
 [[package]]
 name = "forensicnomicon"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ac93239ea6e37ff6f00c54bd204a0a4d9c6ca5f7b0aaeb852f02a899e183830"
-
-[[package]]
-name = "forensicnomicon"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ed4548e40fc4f7f22f769ba68afbb426c379c168ea4ab019421f10d91fa3b4e"
@@ -119,11 +113,11 @@ dependencies = [
 
 [[package]]
 name = "sqlite-core"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4707039a88e052418973ca17f08a02cc7bcced45491057c6e91bae8c2c0a39ce"
+checksum = "9beb05e4966c9eb8c5b1902c08274769366295e6d046a1bf8de3872fe4df6216"
 dependencies = [
- "forensicnomicon 0.11.0",
+ "forensicnomicon",
 ]
 
 [[package]]
@@ -159,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "trash-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "percent-encoding",
@@ -170,10 +164,10 @@ dependencies = [
 
 [[package]]
 name = "trash-forensic"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
- "forensicnomicon 1.0.0",
+ "forensicnomicon",
  "serde",
  "trash-core",
 ]
