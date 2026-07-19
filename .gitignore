@@ -1,1 +1,4 @@
 /target
+
+# Claude Code worktree / session data — never part of the repo
+/.claude/
