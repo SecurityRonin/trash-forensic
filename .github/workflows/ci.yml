@@ -48,3 +48,22 @@ jobs:
           toolchain: 1.96.0
       - uses: taiki-e/install-action@cargo-deny
       - run: cargo deny check
+
+  vet:
+    name: Cargo Vet (supply-chain)
+    runs-on: ubuntu-latest
+    # Complements `deny` (known-bad advisories/licenses) with the supply-chain-
+    # injection layer: every dependency version must be human-source-reviewed or
+    # covered by an imported aggregate audit set (Google/Mozilla/Bytecode-Alliance/
+    # Embark). Config in supply-chain/{config,audits,imports}.toml.
+    steps:
+      - - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+      - name: Install cargo-vet
+        uses: taiki-e/install-action@59012be0884e296ca2da49b530610e72c49039ad # v2.81.6
+        with:
+          tool: cargo-vet
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Check supply chain
+        run: cargo vet --locked
