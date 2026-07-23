@@ -10,6 +10,7 @@
 # etc. — crate-prefixed, so they never match a `v[0-9]*` binary trigger.
 
 [workspace]
+git_tag_name = "{{ package }}-v{{ version }}"
 git_tag_enable = true
 git_release_enable = false
 changelog_update = true
