@@ -23,9 +23,11 @@ serde           = { version = "1", features = ["derive"] }
 # RFC 2396 percent-decoding for the Linux XDG `.trashinfo` `Path=` field.
 percent-encoding = "2"
 # Pure-Rust (no libsqlite3) SQLite reader for the iOS Photos.sqlite trash table.
-# 0.9 aligns on forensicnomicon 1.0 (matches this workspace), so the tree carries
-# a single forensicnomicon version — no duplicate.
-sqlite-core = "0.9"
+# 0.10 carries the guard that stops a crafted database panicking the carver
+# (an inverted [lo, hi) reaching Ord::clamp). The tree still holds a single
+# forensicnomicon — 1.10.0, which 0.10 needs for its SQLITE_*_OFFSET constants
+# and which this workspace already permits at "1".
+sqlite-core = "0.10"
 
 # Paranoid Gatekeeper: these crates parse untrusted, attacker-controllable `$I`
 # index files. Never panic, never read out of bounds, never trust a length.
