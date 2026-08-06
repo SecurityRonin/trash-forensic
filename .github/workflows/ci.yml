@@ -1,73 +1,40 @@
-name: ci
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
+    branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
+permissions:
+  contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
-        with:
-          toolchain: 1.96.0
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - run: cargo fmt --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
-
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
-        with:
-          toolchain: 1.96.0
-          components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Coverage (every uncovered line must carry // cov:unreachable)
-        run: |
-          cargo llvm-cov --workspace --lcov --output-path lcov.info
-          python3 .github/check-coverage.py lcov.info
-
-  deny:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      # Run cargo-deny on the normal runner (not the action's musl container, where
-      # the rust-toolchain.toml 1.96.0 pin resolves to an uninstalled -musl host)
-      # with a current cargo-deny that parses the latest advisory-db entries.
-      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
-        with:
-          toolchain: 1.96.0
-      - uses: taiki-e/install-action@cargo-deny
-      - run: cargo deny check
-
-  vet:
-    name: Cargo Vet (supply-chain)
-    runs-on: ubuntu-latest
-    # Complements `deny` (known-bad advisories/licenses) with the supply-chain-
-    # injection layer: every dependency version must be human-source-reviewed or
-    # covered by an imported aggregate audit set (Google/Mozilla/Bytecode-Alliance/
-    # Embark). Config in supply-chain/{config,audits,imports}.toml.
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
-        with:
-          toolchain: 1.96.0
-      - name: Install cargo-vet
-        uses: taiki-e/install-action@59012be0884e296ca2da49b530610e72c49039ad # v2.81.6
-        with:
-          tool: cargo-vet
-      - name: Fetch dependencies
-        run: cargo fetch
-      - name: Check supply chain
-        run: cargo vet --locked
+  # fmt · clippy · test · MSRV · cargo-deny · cargo-vet · secret scan ·
+  # fuzz build-check · rustdoc · 100% per-line coverage · path-dep gate.
+  #
+  # The old `coverage` job enforced 100% per-line over `--workspace` via
+  # .github/check-coverage.py, exempting `// cov:unreachable` — exactly the
+  # shared workflow's default gate, so `coverage-gate` is left alone. MSRV is
+  # read from rust-version (1.96); the old workflow had no MSRV job at all, so
+  # this is added by adoption rather than carried.
+  ci:
+    uses: SecurityRonin/fleet-ci/.github/workflows/rust-ci.yml@a62ab10603151071744cec0b4e3638aa6406d4e4
+    with:
+      # Carried across: NO job in the old workflow passed --all-features. Every
+      # one of them (`cargo clippy --workspace --all-targets`,
+      # `cargo test --workspace`, `cargo llvm-cov --workspace`) built the
+      # default feature set only. This crate gates its per-OS trash
+      # implementations behind features — `default = ["windows", "linux",
+      # "macos", "android", "ios"]` with 12 non-default features besides — so
+      # inheriting `all-features: true` would newly compile, test and gate code
+      # paths that have never been in scope. That is a scope expansion an
+      # adoption PR has no mandate to make.
+      all-features: false
+      # Carried across: the old gate matched a BARE `cov:unreachable` substring,
+      # and 2 of this repo's 16 markers carry no reason. The shared workflow
+      # defaults to requiring `// cov:unreachable: <invariant>`, which would
+      # fail those two lines — a stricter gate arriving as a side effect of
+      # adoption. Tightening this is worth doing, but as its own reviewed change
+      # against the 2 markers, not here.
+      require-exemption-reason: false
