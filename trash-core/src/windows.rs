@@ -31,7 +31,7 @@
 //! followed by the variable-length UTF-16LE path at offset 28.
 //!
 //! All integers are read through bounds-checked helpers: `$I` bytes are treated
-//! as attacker-controlled, so a truncated or hostile file yields an [`Error`],
+//! as attacker-controlled, so a truncated or hostile file yields an [`enum@Error`],
 //! never a panic.
 //!
 //! [`trash-forensic`]: https://docs.rs/trash-forensic
@@ -91,7 +91,8 @@ pub enum Error {
         needed: usize,
     },
 
-    /// The version-2 name-length field exceeds [`MAX_V2_NAME_CHARS`] — rejected
+    /// The version-2 name-length field exceeds the crate-private
+    /// `MAX_V2_NAME_CHARS` cap (32768) — rejected
     /// before allocating to defend against a hostile length.
     #[error("$I v2 name length {chars} chars exceeds cap {MAX_V2_NAME_CHARS}")]
     NameLengthTooLarge {
@@ -138,7 +139,7 @@ pub struct RecycleBinIndex {
 ///
 /// # Errors
 ///
-/// Returns [`Error`] when the data is truncated, carries an unsupported version,
+/// Returns [`enum@Error`] when the data is truncated, carries an unsupported version,
 /// or (version 2) declares a filename length that overflows the buffer or the
 /// safety cap. Never panics on hostile input.
 pub fn parse_index(data: &[u8]) -> Result<RecycleBinIndex, Error> {
