@@ -39,7 +39,7 @@
 //!   carries **no timezone** — it is naive *local* time, so it is decoded into a
 //!   [`NaiveDateTime`] and must never be treated as UTC.
 //! * If `Path=` or `DeletionDate=` appears more than once, the **first**
-//!   occurrence wins (spec footnote [8]).
+//!   occurrence wins (spec footnote `[8]`).
 //!
 //! [`trash-forensic`]: https://docs.rs/trash-forensic
 
