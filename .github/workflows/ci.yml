@@ -19,7 +19,7 @@ jobs:
   # read from rust-version (1.96); the old workflow had no MSRV job at all, so
   # this is added by adoption rather than carried.
   ci:
-    uses: SecurityRonin/fleet-ci/.github/workflows/rust-ci.yml@9234e1fa9f85b14a8d6fddc7a8f7378f7e30b183
+    uses: SecurityRonin/fleet-ci/.github/workflows/rust-ci.yml@85c7263e5e1a25a090f602419ac27f87aeb1d1e3
     with:
       # Carried across: NO job in the old workflow passed --all-features. Every
       # one of them (`cargo clippy --workspace --all-targets`,
