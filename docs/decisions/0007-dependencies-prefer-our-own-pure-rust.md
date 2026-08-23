@@ -16,12 +16,12 @@ third-party equivalents.
 
 - **iOS SQLite access uses `sqlite-core`** — the fleet's pure-Rust (no
   `libsqlite3`) SQLite reader — not `rusqlite`
-  (`trash-core/Cargo.toml`; `trash-core/src/ios.rs`: "no `libsqlite3`"). This is
+  (`core/Cargo.toml`; `core/src/ios.rs`: "no `libsqlite3`"). This is
   prefer-our-own and keeps `forbid(unsafe)` intact. Recovery of *purged* rows
   (WAL, freelist, carving) is left to the `sqlite-core` engine rather than
   reimplemented here.
 - **Findings use `forensicnomicon::report`** — the fleet's normalized reporting
-  model (`trash-forensic/Cargo.toml`; `trash-forensic/src/lib.rs`) — so trash
+  model (`forensic/Cargo.toml`; `forensic/src/lib.rs`) — so trash
   findings are the union type every other analyzer emits, never a bespoke
   `TrashAnalysis` shape.
 - **Parsing deps are kept minimal and purpose-scoped**: `chrono` (timestamp

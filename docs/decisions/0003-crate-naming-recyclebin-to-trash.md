@@ -25,7 +25,7 @@ applied with the genus as the `<x>`, keeping the `-core` / `-forensic` suffixes
 `refactor!` with a `BREAKING CHANGE` note superseding the old names, moving
 packages, import paths (`recyclebin_core` → `trash_core`), workspace deps, fuzz
 paths, docs, and the analyzer identity stamped on findings (`ANALYZER =
-"trash-forensic"`, `trash-forensic/src/lib.rs`).
+"trash-forensic"`, `forensic/src/lib.rs`).
 
 Neither crate sets `[lib] name`, so the import paths are `trash_core` /
 `trash_forensic` — the bare `trash` name is not hijacked, and there is no

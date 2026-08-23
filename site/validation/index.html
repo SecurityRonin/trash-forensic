@@ -1,0 +1,942 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Windows Recycle Bin $I index reader + forensic analyzer — recover deleted-file path, size, and deletion time; flag purged content, path traversal, and missing timestamps.">
+      
+      
+      
+        <link rel="canonical" href="https://securityronin.github.io/trash-forensic/validation/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../privacy/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Validation - trash-forensic</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#validation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="trash-forensic" class="md-header__button md-logo" aria-label="trash-forensic" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            trash-forensic
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Validation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SecurityRonin/trash-forensic" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SecurityRonin/trash-forensic
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="trash-forensic" class="md-nav__button md-logo" aria-label="trash-forensic" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    trash-forensic
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SecurityRonin/trash-forensic" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SecurityRonin/trash-forensic
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#windows-authoritative-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows — authoritative specification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oracle-methodology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Oracle methodology
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Oracle methodology">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cross-check-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-check results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#robustness-panic-free-on-hostile-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Robustness (panic-free on hostile input)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spec-ambiguity-resolved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec ambiguity resolved
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-platform-oracles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-platform oracles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-platform oracles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linux-freedesktoporg-xdg-trashinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux — freedesktop.org / XDG .trashinfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macos-trash-ds_store-put-back-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS — Trash .DS_Store put-back records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#android-mediastore-trashed-filename-codec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Android — MediaStore .trashed- filename codec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-photossqlite-recently-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iOS — Photos.sqlite Recently Deleted
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fuzzing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuzzing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../privacy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Privacy Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../terms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terms of Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#windows-authoritative-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows — authoritative specification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oracle-methodology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Oracle methodology
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Oracle methodology">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cross-check-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-check results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#robustness-panic-free-on-hostile-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Robustness (panic-free on hostile input)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#spec-ambiguity-resolved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec ambiguity resolved
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-platform-oracles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-platform oracles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-platform oracles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linux-freedesktoporg-xdg-trashinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux — freedesktop.org / XDG .trashinfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macos-trash-ds_store-put-back-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS — Trash .DS_Store put-back records
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#android-mediastore-trashed-filename-codec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Android — MediaStore .trashed- filename codec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-photossqlite-recently-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        iOS — Photos.sqlite Recently Deleted
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fuzzing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuzzing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="validation">Validation</h1>
+<p>Each <code>trash-core</code> reader is validated against an <strong>independent oracle</strong> — a tool
+or specification we did not write — not only against self-consistent round-trips.
+This is the build-time front door to the Doer-Checker discipline. The Windows <code>$I</code>
+reader is documented in full first; the four other platforms follow under
+<a href="#cross-platform-oracles">Cross-platform oracles</a>. The Windows oracle is the C
+tool <a href="https://github.com/abelcheung/rifiuti2">rifiuti2</a> (<code>rifiuti-vista</code>, v0.8.2).</p>
+<h2 id="windows-authoritative-specification">Windows — authoritative specification</h2>
+<p>The byte layout follows the libyal <em>dtformats</em> reference:</p>
+<blockquote>
+<p><strong>The Windows Recycle.Bin file formats</strong>, libyal/dtformats —
+<a href="https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc">https://github.com/libyal/dtformats/blob/main/documentation/Windows%20Recycle.Bin%20file%20formats.asciidoc</a></p>
+</blockquote>
+<p>The <code>$I</code> index record (the structure this crate parses):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Size</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>8</td>
+<td>Format version (<code>1</code> = pre-Win10, <code>2</code> = Win10+), little-endian</td>
+</tr>
+<tr>
+<td>8</td>
+<td>8</td>
+<td>Original file size, little-endian</td>
+</tr>
+<tr>
+<td>16</td>
+<td>8</td>
+<td>Deletion time — Windows <code>FILETIME</code> (100 ns ticks since 1601-01-01 UTC)</td>
+</tr>
+<tr>
+<td>24</td>
+<td>520</td>
+<td><em>(version 1 only)</em> Original filename — fixed 260-<code>wchar_t</code> UTF-16LE field</td>
+</tr>
+<tr>
+<td>24</td>
+<td>4</td>
+<td><em>(version 2 only)</em> Number of characters in the filename</td>
+</tr>
+<tr>
+<td>28</td>
+<td>…</td>
+<td><em>(version 2 only)</em> Original filename — variable UTF-16LE, NUL-terminated</td>
+</tr>
+</tbody>
+</table>
+<p>Byte order is little-endian; timestamps are UTC <code>FILETIME</code>; strings are UTF-16LE
+with an end-of-string character.</p>
+<h2 id="oracle-methodology">Oracle methodology</h2>
+<p>The fixtures under <code>tests/data/</code> were hand-assembled <strong>strictly from the spec
+above</strong> (raw <code>struct.pack</code>, not round-tripped through any writer of ours), then
+decoded with <strong>both</strong> <code>trash-core::parse_index</code> <strong>and</strong> <code>rifiuti-vista</code>.
+The two must agree on version, original path, original size, and deletion time.</p>
+<div class="highlight"><pre><span></span><code>rifiuti-vista -f json tests/data/&lt;fixture&gt;
+</code></pre></div>
+<h3 id="cross-check-results">Cross-check results</h3>
+<table>
+<thead>
+<tr>
+<th>Fixture</th>
+<th>Version</th>
+<th>rifiuti-vista deletion time</th>
+<th>size</th>
+<th>path</th>
+<th>reader agrees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$IAB12CD.docx</code></td>
+<td>2</td>
+<td><code>2024-01-15T10:30:00Z</code></td>
+<td>1234</td>
+<td><code>C:\Users\victim\Documents\secret plan.docx</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>$IZZ99YY.txt</code></td>
+<td>1</td>
+<td><code>2015-06-01T00:00:00Z</code></td>
+<td>999</td>
+<td><code>C:\temp\oldfile.txt</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>$ITRAVER.dll</code></td>
+<td>2</td>
+<td><code>2023-03-03T03:03:03Z</code></td>
+<td>4096</td>
+<td><code>..\..\..\Windows\System32\evil.dll</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>$INODATE.bin</code></td>
+<td>2</td>
+<td><em>(rifiuti reports "deletion time is suspicious or broken")</em></td>
+<td>42</td>
+<td><code>C:\Data\nodate.bin</code></td>
+<td>✅ — reader maps the zero <code>FILETIME</code> to <code>deleted_at = None</code></td>
+</tr>
+</tbody>
+</table>
+<p>The zero-<code>FILETIME</code> case is informative: rifiuti-vista rejects the record as
+having a broken deletion time, which confirms the reader's choice to surface a
+zero <code>FILETIME</code> as <code>None</code> ("recorded but not set") rather than as the 1601 epoch.</p>
+<h2 id="robustness-panic-free-on-hostile-input">Robustness (panic-free on hostile input)</h2>
+<p><code>$I</code> bytes are treated as attacker-controlled. Unit + integration tests assert a
+typed <code>Error</code> (never a panic) for:</p>
+<ul>
+<li>a file shorter than the 24-byte header (<code>TruncatedHeader</code>);</li>
+<li>an unsupported version field, with the raw value surfaced (<code>UnsupportedVersion</code>);</li>
+<li>a version-1 file missing the full fixed 520-byte name field (<code>TruncatedV1Name</code>);</li>
+<li>a version-2 file with no length field (<code>TruncatedV2Length</code>);</li>
+<li>a version-2 length that overflows the buffer (<code>TruncatedV2Name</code>) or exceeds the
+  32 768-char allocation cap (<code>NameLengthTooLarge</code>).</li>
+</ul>
+<p>Both the <code>parse_index</code> and the full parse→audit pipeline are fuzzed
+(<code>cargo fuzz run fuzz_parse_index</code> / <code>fuzz_forensic</code>) with the invariant <em>must
+not panic</em>; 100 000-run smoke jobs run in CI.</p>
+<h2 id="spec-ambiguity-resolved">Spec ambiguity resolved</h2>
+<p>The spec states the version-2 character count at offset 24 but does not state
+whether it <strong>includes</strong> the trailing NUL. Both the libyal reference and
+rifiuti-vista treat it as the full UTF-16LE string length <strong>including</strong> the NUL
+terminator. The reader therefore reads <code>chars * 2</code> bytes and stops decoding at
+the first NUL <code>wchar_t</code>, which is correct whether or not the producer counted the
+NUL — a name shorter than the declared length simply terminates early.</p>
+<h2 id="cross-platform-oracles">Cross-platform oracles</h2>
+<p>Each non-Windows reader is checked the same way — against a primary spec and an
+independent decoder.</p>
+<h3 id="linux-freedesktoporg-xdg-trashinfo">Linux — freedesktop.org / XDG <code>.trashinfo</code></h3>
+<ul>
+<li><strong>Spec</strong>: freedesktop.org <a href="https://specifications.freedesktop.org/trash/latest/">Trash Specification v1.0</a>
+  (2014-01-02); <code>Path=</code> percent-encoding per <a href="https://www.rfc-editor.org/rfc/rfc2396#section-2">RFC 2396 §2</a>.</li>
+<li><strong>Oracle</strong>: the two non-trivial transforms — RFC 2396 percent-decoding (where
+  <code>+</code> stays a literal <code>+</code>, <em>not</em> a space) and the naive-local-time
+  <code>DeletionDate</code> parse — are cross-checked against Python <code>urllib.parse.unquote</code>
+  and <code>datetime.strptime</code>; outputs agree. The reader decodes the date into a
+  <code>NaiveDateTime</code>, never a UTC instant, because the spec value carries no zone.</li>
+<li><strong>Cross-check tools</strong> (forensic, run against captured Linux trees): trash-cli,
+  Fox-IT <a href="https://docs.dissect.tools/en/latest/plugins/recyclebin.html">dissect.target</a>.</li>
+</ul>
+<h3 id="macos-trash-ds_store-put-back-records">macOS — Trash <code>.DS_Store</code> put-back records</h3>
+<ul>
+<li><strong>Spec</strong>: Wim Lewis's reverse-engineered <a href="https://metacpan.org/dist/Mac-Finder-DSStore/view/DSStoreFormat.pod"><code>DSStoreFormat.pod</code></a>
+  (Bud1 buddy allocator → <code>DSDB</code> B-tree → records); the <code>ptbN</code>/<code>ptbL</code> record
+  types are newer Finder additions cross-checked against al45tair's
+  <a href="https://pypi.org/project/ds_store/"><code>ds_store</code></a> library (v1.3.2).</li>
+<li><strong>Oracle</strong>: the test fixture (<code>tests/data/putback.DS_Store</code>) is minted by
+  <code>ds_store</code>, not hand-encoded. Beyond the fixture, decoding a <strong>real live</strong>
+  <code>~/.Trash/.DS_Store</code> (62 put-back records) is <strong>byte-for-byte identical</strong> to
+  the <code>ds_store</code> oracle — including Finder de-dup name divergence and
+  <code>/Applications</code> firmlink normalisation. Absence of a put-back record is normal
+  (Finder writes <code>.DS_Store</code> lazily) and is deliberately not flagged.</li>
+</ul>
+<h3 id="android-mediastore-trashed-filename-codec">Android — <code>MediaStore</code> <code>.trashed-</code> filename codec</h3>
+<ul>
+<li><strong>Spec</strong>: AOSP <code>MediaProvider</code> <a href="https://android.googlesource.com/platform/packages/providers/MediaProvider/+/refs/heads/android11-release/src/com/android/providers/media/util/FileUtils.java"><code>FileUtils.java</code></a>
+  <code>PATTERN_EXPIRES_FILE = (?i)^\.(pending|trashed)-(\d+)-([^/]+)$</code>, with
+  <code>dateExpires</code> in epoch <strong>seconds</strong> and 30-day (trashed) / 7-day (pending)
+  default windows.</li>
+<li><strong>Oracle</strong>: the codec's match/reject and field-splitting decisions agree
+  exactly with that regex run over the same inputs in Python.</li>
+</ul>
+<h3 id="ios-photossqlite-recently-deleted">iOS — <code>Photos.sqlite</code> Recently Deleted</h3>
+<ul>
+<li><strong>Spec</strong>: <code>ZASSET.ZTRASHEDSTATE = 1</code> + <code>ZTRASHEDDATE</code> in Mac Absolute Time
+  (Cocoa epoch, +978 307 200 s), per The Forensic Scooter's
+  <a href="https://theforensicscooter.com/2022/05/02/photos-sqlite-query-documentation-notable-artifacts/">Photos.sqlite documentation</a>
+  and kacos2000's <code>Photos_sqlite.sql</code>.</li>
+<li><strong>Engine</strong>: the pure-Rust <a href="https://crates.io/crates/sqlite-core"><code>sqlite-core</code></a>
+  reader (no <code>libsqlite3</code>); purged-row recovery (WAL/freelist/carving) is left to
+  that engine, not reimplemented here.</li>
+<li><strong>Oracle</strong>: a real <code>Photos.sqlite</code> (<code>tests/data/Photos.sqlite</code>) is decoded by
+  both this reader and the <code>sqlite3</code> CLI
+  (<code>SELECT … datetime(ZTRASHEDDATE+978307200,'unixepoch') … WHERE ZTRASHEDSTATE=1</code>);
+  the two agree row-for-row on filename and trashed date.</li>
+</ul>
+<h2 id="fuzzing">Fuzzing</h2>
+<p>Every reader that consumes untrusted input has a <code>cargo fuzz</code> target with a
+<em>must-not-panic</em> invariant: <code>fuzz_parse_index</code> and <code>fuzz_forensic</code> (Windows),
+<code>fuzz_parse_trashinfo</code> (Linux), <code>fuzz_parse_dsstore</code> (the macOS Bud1 binary
+parser), <code>fuzz_parse_trashed_name</code> (Android), and <code>fuzz_ios_photos</code> (iOS).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -3,8 +3,8 @@ name: fuzz
 on:
   push:
     paths:
-      - "trash-core/**"
-      - "trash-forensic/**"
+      - "core/**"
+      - "forensic/**"
       - "fuzz/**"
       - ".github/workflows/fuzz.yml"
   pull_request:

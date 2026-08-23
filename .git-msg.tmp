@@ -1,0 +1,34 @@
+refactor: name the member directories for their role, not their crate
+
+`trash-core/` -> `core/`, `trash-forensic/` -> `forensic/`. No crate name
+changes, so nothing published moves -- the name lives in Cargo.toml, not in the
+folder.
+
+This is what CLAUDE.md line 93 and ADR-0008 have always said ("two members:
+`core/` -> `<x>-core` and `forensic/` -> `<x>-forensic`"). A fleet survey found 8
+of 70 workspaces had drifted to naming the directory after the crate; nothing
+mechanical ever checked, so 70 code reviews did not catch it.
+
+The duplication is not only untidy, it breaks tooling. `find -type d -name
+trash-forensic` matches TWO directories -- the repo and the member inside it --
+so a script that resolves a repo by name silently reads the wrong Cargo.toml.
+That happened twice while surveying this very problem, and produced a confident
+"this repo has no workspace members" for five repos that have them. `core/` and
+`forensic/` cannot collide with a repo name.
+
+Updated beyond the two `git mv`s, because a rename that only moves directories
+leaves silent breakage behind:
+
+  - root Cargo.toml: members list and the inter-crate `path = "core"`
+  - fuzz/Cargo.toml: both `../` path deps
+  - .github/workflows/fuzz.yml: the `paths:` filters, which would otherwise stop
+    matching and the fuzz workflow would simply never fire again -- green by
+    never running
+  - docs/PRD.md and all eight ADRs, which cite evidence by file path
+
+URLs were deliberately left alone: the docs site is
+`securityronin.github.io/trash-forensic/`, and a blanket substitution would have
+rewritten it.
+
+84 tests across 6 targets pass; fmt, clippy -D warnings and mkdocs --strict clean;
+the fuzz manifest still resolves.

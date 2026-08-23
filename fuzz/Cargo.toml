@@ -47,5 +47,5 @@ doc  = false
 
 [dependencies]
 libfuzzer-sys   = "0.4"
-trash-core = { path = "../trash-core" }
-trash-forensic = { path = "../trash-forensic" }
+trash-core = { path = "../core" }
+trash-forensic = { path = "../forensic" }

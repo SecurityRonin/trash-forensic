@@ -25,12 +25,12 @@ Ship two crates:
 - **`trash-core`** — read-only readers. One module per OS decoding its native
   artifact to a typed record (`RecycleBinIndex`, `TrashInfo`, `PutBack`,
   `TrashedName`, `TrashedAsset`) and pairing metadata with content. It produces
-  no findings (`trash-core/src/lib.rs`: "none produces findings").
+  no findings (`core/src/lib.rs`: "none produces findings").
 - **`trash-forensic`** — analyzers. Each grades a parsed record + its pairing
   into canonical `forensicnomicon::report::Finding`s
-  (`trash-forensic/src/lib.rs`).
+  (`forensic/src/lib.rs`).
 
-`trash-forensic` depends on `trash-core` (`trash-forensic/Cargo.toml`:
+`trash-forensic` depends on `trash-core` (`forensic/Cargo.toml`:
 `trash-core = { workspace = true }`), which is the default direction of the
 fleet standard — the reader's record types already expose everything the trash
 auditors need (original path, size, deletion time, the `$I`/`$R` and

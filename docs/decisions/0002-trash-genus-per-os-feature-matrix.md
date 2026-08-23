@@ -26,11 +26,11 @@ RED/GREEN reader+analyzer pairs.
 
 Treat "trash" as the genus and each platform's artifact as a species in its own
 module: `windows`, `linux`, `macos`, `android`, `ios` in both crates
-(`trash-core/src/lib.rs`, `trash-forensic/src/lib.rs`). Each module is gated
+(`core/src/lib.rs`, `forensic/src/lib.rs`). Each module is gated
 behind a same-named Cargo feature, and each feature pulls only its own optional
-dependencies (`trash-core/Cargo.toml`: `linux = ["dep:percent-encoding"]`,
+dependencies (`core/Cargo.toml`: `linux = ["dep:percent-encoding"]`,
 `ios = ["dep:sqlite-core"]`; `trash-forensic` features chain to the matching
-`trash-core/<os>` feature). A consumer builds `--no-default-features --features
+`core/<os>` feature). A consumer builds `--no-default-features --features
 <os>` to drop the rest.
 
 Native leaf terms stay native rather than being homogenized: the Windows backend

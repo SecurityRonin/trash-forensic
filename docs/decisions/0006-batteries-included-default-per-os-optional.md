@@ -17,7 +17,7 @@ split would leave the zero-config path unable to read four of five platforms.
 ## Decision
 
 Default to **all five** platforms in both crates: `default = ["windows", "linux",
-"macos", "android", "ios"]` (`trash-core/Cargo.toml`, `trash-forensic/Cargo.toml`).
+"macos", "android", "ios"]` (`core/Cargo.toml`, `forensic/Cargo.toml`).
 The zero-config `trash-forensic = "…"` dependency, and every fleet binary that
 links it (e.g. `issen`), is fully capable across every OS with no feature
 knowledge required.
