@@ -29,7 +29,7 @@ Enforce the posture statically and dynamically.
   (`#![cfg_attr(test, allow(...))]` in each `lib.rs`, and `clippy.toml`
   `allow-unwrap-in-tests`/`allow-expect-in-tests`). Binary parsers use
   bounds-checked reads, cap allocations against hostile length fields, and walk
-  the `.DS_Store` B-tree with a cycle guard (`trash-core/src/macos.rs`),
+  the `.DS_Store` B-tree with a cycle guard (`core/src/macos.rs`),
   returning a typed error carrying the offending value rather than panicking.
 - **Dynamic.** Every untrusted-input reader carries a `cargo-fuzz` target with a
   must-not-panic invariant — `fuzz_parse_index`, `fuzz_parse_trashinfo`,

@@ -2,7 +2,7 @@
 
 *A reverse-written intent document for a **library-tier** fleet repo. Every
 current-state claim below is grounded in a same-session read of the workspace
-(`Cargo.toml`, `trash-core/src/`, `trash-forensic/src/`, `docs/validation.md`) on
+(`Cargo.toml`, `core/src/`, `forensic/src/`, `docs/validation.md`) on
 2026-07-24. The load-bearing decisions live as ADRs
 [0001](decisions/0001-reader-analyzer-split.md)–[0008](decisions/0008-msrv-pinned-toolchain.md)
 under [`docs/decisions/`](decisions/).*

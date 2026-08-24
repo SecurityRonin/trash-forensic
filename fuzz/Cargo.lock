@@ -49,9 +49,28 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "forensicnomicon"
-version = "0.5.7"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fd693d3295fa98087980ffcd2d1c9144cca9058c5e6c98a5dd9cceec901adc4"
+checksum = "634cce7a9f7bec3b4e40ee9014a1a633ad17dd08694b291066818c18c013fab1"
+dependencies = [
+ "forensicnomicon-core",
+ "forensicnomicon-data",
+]
+
+[[package]]
+name = "forensicnomicon-core"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7eb783b79792587a65eb4fb0aeff41b471b44659fbacfe15f61d3685c122a889"
+
+[[package]]
+name = "forensicnomicon-data"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78a2c24ccad1150609546fbe85ad466e2cf24443fdac13e32297acb4ef913c28"
+dependencies = [
+ "forensicnomicon-core",
+]
 
 [[package]]
 name = "getrandom"
@@ -101,6 +120,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "percent-encoding"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -129,6 +154,15 @@ name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
+name = "sqlite-core"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb0c546ae560e1dbbedb72df7079bbcde3f04fd691bd84cd3e711c0f4cbc24ae"
+dependencies = [
+ "forensicnomicon",
+]
 
 [[package]]
 name = "syn"
@@ -163,16 +197,19 @@ dependencies = [
 
 [[package]]
 name = "trash-core"
-version = "0.1.0"
+version = "0.3.2"
 dependencies = [
  "chrono",
+ "percent-encoding",
+ "sqlite-core",
  "thiserror",
 ]
 
 [[package]]
 name = "trash-forensic"
-version = "0.1.0"
+version = "0.3.2"
 dependencies = [
+ "chrono",
  "forensicnomicon",
  "trash-core",
 ]
